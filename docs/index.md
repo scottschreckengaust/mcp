@@ -14,6 +14,7 @@ The Core MCP Server manages and coordinates other MCP servers in your environmen
 - Planning and guidance to orchestrate MCP Servers
 - UVX Installation Support
 - Centralized Configuration
+- sample
 
 [Learn more about the Core MCP Server](servers/core-mcp-server.md)
 
