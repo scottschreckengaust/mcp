@@ -1,6 +1,6 @@
 # Core MCP Server
 
-MCP server that provides a starting point for using the following awslabs MCP servers
+MCP server that provides a starting point for using the following awslabs MCP servers.
 - awslabs.cdk-mcp-server
 - awslabs.bedrock-kb-retrieval-mcp-server
 - awslabs.nova-canvas-mcp-server
