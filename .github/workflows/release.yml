@@ -2,8 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 10 * * *'
 
 permissions:
   contents: write
@@ -11,7 +9,6 @@ permissions:
 
 jobs:
   create-metadata:
-    if: github.repository == 'awslabs/mcp'
     runs-on: ubuntu-latest
     outputs:
       hash: ${{ steps.last-release.outputs.hash }}
@@ -73,57 +70,57 @@ jobs:
         uses: astral-sh/setup-uv@c7f87aa956e4c323abf06d5dec078e358f6b4d04 # v6.0.0
 
       - name: Update packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         run: |
           HASH="${{ needs.create-metadata.outputs.hash }}"
           uv run --script scripts/release.py update-packages --directory src/ $HASH
 
-      - name: Configure git
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-        run: |
-          git config --global user.name "awslabs-mcp"
-          git config --global user.email "203918161+awslabs-mcp@users.noreply.github.com"
+      # - name: Configure git
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+      #   run: |
+      #     git config --global user.name "awslabs-mcp"
+      #     git config --global user.email "203918161+awslabs-mcp@users.noreply.github.com"
 
       - name: Commit changes
         id: commit
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         run: |
           VERSION="${{ needs.create-metadata.outputs.version }}"
-          git config --global credential.helper store
-          echo "https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com" > ~/.git-credentials
-          git remote set-url origin https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          # git config --global credential.helper store
+          # echo "https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com" > ~/.git-credentials
+          # git remote set-url origin https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git add -u
           if git diff-index --quiet HEAD; then
             echo "changes_made=false" >> $GITHUB_OUTPUT
           else
             git commit -m 'Automatic update of packages'
-            git push https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+            git push HEAD:main
             git tag -a "$VERSION" -m "Release $VERSION"
-            git push https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/${{ github.repository }} tag "$VERSION"
+            git push tag "$VERSION"
             echo "changes_made=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Create notes
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         run: |
           HASH="${{ needs.create-metadata.outputs.hash }}"
           uv run --script scripts/release.py generate-notes --directory src/ $HASH > RELEASE_NOTES.md
           cat RELEASE_NOTES.md
 
       - name: Release notes
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-notes
           path: RELEASE_NOTES.md
 
   publish-pypi:
-    if: github.repository == 'awslabs/mcp' && needs.create-metadata.outputs.pypi_packages != '[]' && needs.create-metadata.outputs.pypi_packages != ''
+    if: needs.create-metadata.outputs.pypi_packages != '[]' && needs.create-metadata.outputs.pypi_packages != ''
     needs: [update-packages, create-metadata]
     strategy:
       fail-fast: false
@@ -159,13 +156,13 @@ jobs:
         working-directory: src/${{ matrix.package }}
         run: uv build
 
-      - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
-        with:
-          packages-dir: src/${{ matrix.package }}/dist
+      # - name: Publish package to PyPI
+      #   uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+      #   with:
+      #     packages-dir: src/${{ matrix.package }}/dist
 
   publish-npm:
-    if: github.repository == 'awslabs/mcp' && needs.create-metadata.outputs.npm_packages != '[]' && needs.create-metadata.outputs.npm_packages != ''
+    if: needs.create-metadata.outputs.npm_packages != '[]' && needs.create-metadata.outputs.npm_packages != ''
     needs: [update-packages, create-metadata]
     strategy:
       fail-fast: false
@@ -189,29 +186,29 @@ jobs:
         working-directory: src/${{ matrix.package }}
         run: npm ci
 
-      - name: Check if version exists on npm
-        working-directory: src/${{ matrix.package }}
-        run: |
-          VERSION=$(jq -r .version package.json)
-          if npm view --json | jq -e --arg version "$VERSION" '[.[]][0].versions | contains([$version])'; then
-            echo "Version $VERSION already exists on npm"
-            exit 1
-          fi
-          echo "Version $VERSION is new, proceeding with publish"
+      # - name: Check if version exists on npm
+      #   working-directory: src/${{ matrix.package }}
+      #   run: |
+      #     VERSION=$(jq -r .version package.json)
+      #     if npm view --json | jq -e --arg version "$VERSION" '[.[]][0].versions | contains([$version])'; then
+      #       echo "Version $VERSION already exists on npm"
+      #       exit 1
+      #     fi
+      #     echo "Version $VERSION is new, proceeding with publish"
 
       - name: Build package
         working-directory: src/${{ matrix.package }}
         run: npm run build
 
-      - name: Publish package
-        working-directory: src/${{ matrix.package }}
-        run: |
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - name: Publish package
+      #   working-directory: src/${{ matrix.package }}
+      #   run: |
+      #     npm publish --access public
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   create-release:
-    if: github.repository == 'awslabs/mcp' && needs.update-packages.outputs.changes_made == 'true' && !failure() && !cancelled() && ( needs.publish-npm.result == 'success' || needs.publish-pypi.result == 'success')
+    if: needs.update-packages.outputs.changes_made == 'true' && !failure() && !cancelled() && ( needs.publish-npm.result == 'success' || needs.publish-pypi.result == 'success')
     needs: [update-packages, create-metadata, publish-pypi, publish-npm]
     runs-on: ubuntu-latest
     environment: release
@@ -226,8 +223,8 @@ jobs:
           name: release-notes
 
       - name: Create release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN}}
+        # env:
+        #   GH_TOKEN: ${{ secrets.GITHUB_TOKEN}}
         run: |
           VERSION="${{ needs.create-metadata.outputs.version }}"
           gh release create "$VERSION" \
