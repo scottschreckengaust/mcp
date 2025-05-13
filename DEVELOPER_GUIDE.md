@@ -29,6 +29,8 @@ Default output format [None]: json
 | `code .`                                                                                                             | Opens the project in VSCode. You can use the editor of your choice, just adapt this step to your specific use case.                                                                                                              |
 | `pre-commit install`                                                                                                             | Install the pre-commit hooks. Pre-commit checks are crucial for a fast feedback loop while ensuring security practices at the individual change level. To prevent scenarios where these checks are accidentally omitted at the client side, we run it at [CI level](https://github.com/awslabs/mcp/tree/main/.github) too.                                                                                                             |
 
+* Alternatively, test out our default development container in Code Spaces
+
 ## Working on your server
 
 | Action                                            | Explanation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
