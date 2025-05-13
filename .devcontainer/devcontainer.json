@@ -1,6 +1,6 @@
 {
   "containerEnv": {
-    "MY_CONTAINER_VAR": "${localEnv:MY_CONTAINER_VAR:default-container-here}"
+    "MY_CONTAINER_VAR": "${localEnv:MY_CONTAINER_VAR:default-container}"
   },
   "customizations": {
     "vscode": {
@@ -63,6 +63,6 @@
     "GITHUB_DYNAMIC_TOOLSETS": "1",
     "GITHUB_PERSONAL_ACCESS_TOKEN": "${localEnv:GITHUB_TOKEN}",
     "GITHUB_TOOLSETS": "all",
-    "MY_ENV_VAR": "${containerEnv:MY_CONTAINER_VAR:default-local-here}"
+    "MY_ENV_VAR": "${containerEnv:MY_CONTAINER_VAR:default-local}"
   }
 }
