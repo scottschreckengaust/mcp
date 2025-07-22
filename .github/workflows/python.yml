@@ -66,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJson(needs.detect-packages.outputs.packages) }}
+        package: ["core-mcp-server", "aws-api-mcp-server"] # ${{ fromJson(needs.detect-packages.outputs.packages) }}
     name: Build ${{ matrix.package }}
     runs-on: ubuntu-latest
     permissions:

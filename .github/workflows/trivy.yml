@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dockerfile: ${{ fromJson(needs.detect-dockerfiles.outputs.dockerfiles) }}
+        dockerfile: ["src/core-mcp-server", "src/aws-api-mcp-server"] # ${{ fromJson(needs.detect-dockerfiles.outputs.dockerfiles) }}
     name: Build ${{ matrix.dockerfile }}
     permissions:
       contents: read
