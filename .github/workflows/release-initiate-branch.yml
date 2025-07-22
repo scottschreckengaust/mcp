@@ -43,7 +43,7 @@ jobs:
           (command -v pgrep && pgrep --version && pgrep -a -l -f "gpg-agent") || echo "GPG agent not running"
           echo "$(tty) is the tty"
           gpg --no-tty --batch --passphrase '${{ secrets.GPG_PASSPHRASE }}' --pinentry-mode loopback --allow-secret-key-import --import <(echo "${{ secrets.GPG_PRIVATE_KEY }}");
-          gpg --import-ownertrust <(echo "${{ secrets.GPG_OWNER_TRUST }}")
+          gpg --import-ownertrust <(echo "${{ secrets.GPG_KEY_ID }}:6:")
           ls -al ~/.gnupg
           (command -v gpg && gpg --version && gpg --list-keys && gpg --list-secret-keys) || echo "GPG failed"
   look-for-changes:
@@ -89,9 +89,6 @@ jobs:
           RELEASE_BRANCH="release/$RELEASE"
           git config --local user.email "${{ env.GITHUB_USER_EMAIL }}"
           git config --local user.name "${{ env.GITHUB_USER_NAME }}"
-          git config --global credential.helper store
-          echo "https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com" > ~/.git-credentials
-          git remote set-url origin https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git checkout -b "release/$RELEASE"
           git push --set-upstream origin "$RELEASE_BRANCH"
           echo "release-branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
@@ -116,15 +113,20 @@ jobs:
           sparse-checkout: |
             ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
             .github/workflows/release.py
+      - name: Install uv
+        uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
       - name: configure git
+        continue-on-error: true
         run: |
           git config --local user.email "${{ env.GITHUB_USER_EMAIL }}"
           git config --local user.name "${{ env.GITHUB_USER_NAME }}"
-          git config --global credential.helper store
-          echo "https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com" > ~/.git-credentials
-          git remote set-url origin https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/${{ github.repository }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
+          gpg --no-tty --batch --passphrase '${{ secrets.GPG_PASSPHRASE }}' --pinentry-mode loopback --allow-secret-key-import --import <(echo "${{ secrets.GPG_PRIVATE_KEY }}");
+          gpg --import-ownertrust <(echo "${{ secrets.GPG_KEY_ID }}:6:")
+          git config --global user.signingkey "${{ secrets.GPG_KEY_ID }}"
+          git config --global commit.gpgsign true
+          git config --global tag.gpgsign true
+          touch "${{ runner.temp}}/$$.txt"
+          gpg --no-tty --batch --yes --passphrase '${{ secrets.GPG_PASSPHRASE }}' --pinentry-mode loopback --local-user "${{ env.GITHUB_USER_EMAIL }}" --sign "${{ runner.temp }}/$$.txt"
       - name: bump
         run: |
           uv run --script .github/workflows/release.py bump-package --directory=${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
