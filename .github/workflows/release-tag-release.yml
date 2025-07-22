@@ -86,8 +86,7 @@ jobs:
           echo "python-changed-directories=$PYTHON_CHANGED_DIRECTORIES"
           echo "node-changed-directories=$NODE_CHANGED_DIRECTORIES"
           echo "docker-changed-directories=$DOCKER_CHANGED_DIRECTORIES"
-
-          env:
+        env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
 
   publish-npmjs:
