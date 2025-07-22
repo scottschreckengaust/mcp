@@ -135,20 +135,20 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          #TODO: REMOVE WHEN ACTION PINNED TO COMMIT HASH
+          #TODO: REMOVE WHEN ACTION BELOW IS PINNED TO COMMIT HASH
           sparse-checkout: |
             ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
             ./.github/actions/build-and-push-container-image
       - name: Install uv
         uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
-      ##!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ##TODO: UNCOMMENT BEFORE MERGE
-      # - name: Generate Embedding for aws-api-mcp-server
-      #   if: matrix.changed-directory == 'aws-api-mcp-server'
-      #   working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
-      #   run: |
-      #     uv run --frozen generate-embeddings
-      ##!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      #WARNING: LONG RUNNING STEP
+      - name: Generate Embedding for aws-api-mcp-server
+        if: matrix.changed-directory == 'aws-api-mcp-server'
+        working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
+        run: |
+          uv run --frozen generate-embeddings
+      #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       - name: Build package
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
@@ -167,7 +167,7 @@ jobs:
         run: |
           echo "version=$(uv tree 2> /dev/null | grep awslabs | sed -e 's/^.*[[:space:]]v\(.*\)/\1/g')" >> $GITHUB_OUTPUT
       - name: Build and Publish Container
-        continue-on-error: true #TODO: REMOVE THIS WHEN MERGED
+        continue-on-error: true #TODO: NOT SETUP YET SO THIS IS A TEMPORARY FIX
         id: build-and-publish
         uses: ./.github/actions/build-and-push-container-image #TODO: FIX THIS TO COMMIT HASH WHEN MERGED
         if: hashFiles(format('./{0}/{1}/Dockerfile', env.SRC_DIRECTORY, matrix.changed-directory))
