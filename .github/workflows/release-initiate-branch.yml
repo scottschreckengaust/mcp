@@ -89,6 +89,7 @@ jobs:
           echo "release-branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
     
   bump-changed-directories:
+    name: ${{ matrix.changed-directory }} bump
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
     strategy:
