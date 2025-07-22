@@ -63,16 +63,11 @@ outputs:
 
 runs:
   using: "composite"
-  # services:
-  #   registry:
-  #     image: library/registry@sha256:3725021071ec9383eb3d87ddbdff9ed602439b3f7c958c9c2fb941049ea6531d
-  #     ports:
-  #       - 5000:5000
   steps:
     - name: Run Local Registry
       if: fromJson(inputs.push) == false
       run: |
-        docker run -d --rm --restart always --name registry -p 5000:5000 library/registry@sha256:3725021071ec9383eb3d87ddbdff9ed602439b3f7c958c9c2fb941049ea6531d
+        docker run --detach --restart "always" --name "registry" -p 5000:5000 library/registry@sha256:3725021071ec9383eb3d87ddbdff9ed602439b3f7c958c9c2fb941049ea6531d
       shell: bash
     - name: Docker meta
       id: meta
