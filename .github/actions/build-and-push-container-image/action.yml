@@ -69,7 +69,7 @@ runs:
       uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
       with:
         images: |
-          public.ecr.aws/${{ inputs.public-erc-registry-alias }}/${{ github.repository_owner }}/${{ inputs.image }}
+          ${{ fromJson(inputs.push) == false && '' || 'public.ecr.aws/' }}${{ inputs.public-erc-registry-alias }}/${{ github.repository_owner }}/${{ inputs.image }}
 
         # Disable all but the raw and sha
         tags: |
@@ -126,7 +126,7 @@ runs:
       with:
         platforms: 'linux/amd64,linux/arm64' # add more platforms after testing completed
         labels: ${{ steps.meta.outputs.labels }}
-        tags: public.ecr.aws/${{ inputs.public-erc-registry-alias }}/${{ github.repository_owner }}/${{ inputs.image }}
+        tags: ${{ fromJson(inputs.push) == false && '' || 'public.ecr.aws/' }}${{ inputs.public-erc-registry-alias }}/${{ github.repository_owner }}/${{ inputs.image }}
         context: ./src/${{ inputs.image }}
         file: ./src/${{ inputs.image }}/Dockerfile
         push: ${{ fromJson(inputs.push) == false && 'false' || 'true' }}
@@ -159,7 +159,7 @@ runs:
       run: |
         echo "DOCKER_METADATA_OUTPUT_JSON=$DOCKER_METADATA_OUTPUT_JSON"
         docker buildx imagetools create ${{ fromJson(inputs.push) == false && '--dry-run' || '' }} $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-          $(printf 'public.ecr.aws/'$ALIAS'/'$OWNER'/'$IMAGE'@sha256:%s ' *)
+          $(printf '${{ fromJson(inputs.push) == false && '' || 'public.ecr.aws/' }}'$ALIAS'/'$OWNER'/'$IMAGE'@sha256:%s ' *)
       shell: bash
     - name: Inspect image
       env:
@@ -168,7 +168,7 @@ runs:
         OWNER: ${{ github.repository_owner }}
         VERSION: ${{ steps.meta.outputs.version }}
       run: |
-        docker buildx imagetools inspect public.ecr.aws/$ALIAS/$OWNER/$IMAGE:$VERSION
+        docker buildx imagetools inspect ${{ fromJson(inputs.push) == false && '' || 'public.ecr.aws/' }}$ALIAS/$OWNER/$IMAGE:$VERSION
       shell: bash
     - name: Get version
       id: get-version
@@ -178,7 +178,7 @@ runs:
       shell: bash
     - name: Save an image
       run: |
-        docker image save -o "${{ runner.temp }}/${{ inputs.image }}.tar" public.ecr.aws/$ALIAS/$OWNER/$IMAGE:$VERSION
+        docker image save -o "${{ runner.temp }}/${{ inputs.image }}.tar" ${{ fromJson(inputs.push) == false && '' || 'public.ecr.aws/' }}$ALIAS/$OWNER/$IMAGE:$VERSION
       shell: bash
     - name: Upload image
       id: upload-image
