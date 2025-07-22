@@ -170,17 +170,17 @@ jobs:
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
           echo "version=$(uv tree 2> /dev/null | grep awslabs | sed -e 's/^.*[[:space:]]v\(.*\)/\1/g')" >> $GITHUB_OUTPUT
-      - name: Build and Publish Container
-        id: build-and-publish
-        uses: ./.github/actions/build-and-push-container-image
-        if: hashFiles(format('./{0}/{1}/Dockerfile', env.SRC_DIRECTORY, matrix.changed-directory))
-        with:
-          image: ${{ matrix.changed-directory }}
-          version: ${{ steps.get-package-version.outputs.version }}
-          public-erc-role-to-assume: ${{ secrets.AWS_ROLE_ARN_TO_ASSUME }}
-          public-erc-registry-alias: 'a1c4e6g8' # 'f3y8w4n0' # 'w3i4n7u1'
-          public-erc-aws-region: ${{ env.AWS_REGION || 'us-east-1' }}
-          push: false
+      # - name: Build and Publish Container
+      #   id: build-and-publish
+      #   uses: ./.github/actions/build-and-push-container-image
+      #   if: hashFiles(format('./{0}/{1}/Dockerfile', env.SRC_DIRECTORY, matrix.changed-directory))
+      #   with:
+      #     image: ${{ matrix.changed-directory }}
+      #     version: ${{ steps.get-package-version.outputs.version }}
+      #     public-erc-role-to-assume: ${{ secrets.AWS_ROLE_ARN_TO_ASSUME }}
+      #     public-erc-registry-alias: 'a1c4e6g8' # 'f3y8w4n0' # 'w3i4n7u1'
+      #     public-erc-aws-region: ${{ env.AWS_REGION || 'us-east-1' }}
+      #     push: false
       - name: Test
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
