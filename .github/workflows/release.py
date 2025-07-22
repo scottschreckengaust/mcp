@@ -180,13 +180,13 @@ def bump_package(directory: Path) -> int:
         logging.debug('Found PyPI package at %s', directory)
         package = PyPiPackage(directory)
         name = package.package_name()
-        version = package.update_version(None)
+        version = package.bump_version()
         click.echo(f'{name}@{version}')
     if Path(str(directory), 'package.json').is_file():
         logging.debug('Found NPM package at %s', directory)
         package = NpmPackage(directory)
         name = package.package_name()
-        version = package.update_version(None)
+        version = package.bump_version()
         click.echo(f'{name}@{version}')
 
     return 0
