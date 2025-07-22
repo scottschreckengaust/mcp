@@ -67,7 +67,9 @@ runs:
     - name: Run Local Registry
       if: fromJson(inputs.push) == false
       run: |
-        docker run --detach --restart "always" --name "registry" -p 5000:5000 library/registry@sha256:3725021071ec9383eb3d87ddbdff9ed602439b3f7c958c9c2fb941049ea6531d
+        docker run --detach --restart "always" --name "rregistryy" -p 5000:5000 registry:2   # library/registry@sha256:3725021071ec9383eb3d87ddbdff9ed602439b3f7c958c9c2fb941049ea6531d
+        docker ps
+        docker inspect rregistryy
       shell: bash
     - name: Docker meta
       id: meta
