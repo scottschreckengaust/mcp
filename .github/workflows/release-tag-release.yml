@@ -1,6 +1,6 @@
 ---
 # When a tag with format `YYYY.MM.YYYYMMDDHHIISS` is pushed create a "Release"
-
+name: Release v2 Draft and Release (Automatic when tagged)
 on:
   push:
     tags:

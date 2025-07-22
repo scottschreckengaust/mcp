@@ -115,6 +115,9 @@ jobs:
             .github/workflows/release.py
       - name: Install uv
         uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
+      - name: bump
+        run: |
+          uv run --script .github/workflows/release.py bump-package --directory=${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
       - name: configure git
         continue-on-error: true
         run: |
@@ -127,9 +130,6 @@ jobs:
           git config --global tag.gpgsign true
           touch "${{ runner.temp}}/$$.txt"
           gpg --no-tty --batch --yes --passphrase '${{ secrets.GPG_PASSPHRASE }}' --pinentry-mode loopback --local-user "${{ env.GITHUB_USER_EMAIL }}" --sign "${{ runner.temp }}/$$.txt"
-      - name: bump
-        run: |
-          uv run --script .github/workflows/release.py bump-package --directory=${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
       - name: push
         run: |
           git add "${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}"
