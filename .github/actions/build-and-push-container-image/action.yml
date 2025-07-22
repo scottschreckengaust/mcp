@@ -130,7 +130,7 @@ runs:
         context: ./src/${{ inputs.image }}
         file: ./src/${{ inputs.image }}/Dockerfile
         push: ${{ fromJson(inputs.push) == false && 'false' || 'true' }}
-        outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ fromJson(inputs.push) == false && 'false' || 'true' }}
+        outputs: type=image,push-by-digest=${{ fromJson(inputs.push) == false && 'false' || 'true' }},name-canonical=true,push=${{ fromJson(inputs.push) == false && 'false' || 'true' }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         github-token: ${{ inputs.github-container-registry-token }}
@@ -157,6 +157,7 @@ runs:
         ALIAS: ${{ inputs.public-erc-registry-alias }}
         OWNER: ${{ github.repository_owner }}
       run: |
+        echo "DOCKER_METADATA_OUTPUT_JSON=$DOCKER_METADATA_OUTPUT_JSON"
         docker buildx imagetools create ${{ fromJson(inputs.push) == false && '--dry-run' || '' }} $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
           $(printf 'public.ecr.aws/'$ALIAS'/'$OWNER'/'$IMAGE'@sha256:%s ' *)
       shell: bash
