@@ -13,8 +13,8 @@ on:
     branches:
       - main
 env:
-  GITHUB_USER_EMAIL: vars.GITHUB_USER_EMAIL || '203918161+awslabs-mcp@users.noreply.github.com'
-  GITHUB_USER_NAME: vars.GITHUB_USER_NAME || 'awslabs-mcp'
+  GITHUB_USER_EMAIL: ${{ vars.GITHUB_USER_EMAIL || '203918161+awslabs-mcp@users.noreply.github.com' }}
+  GITHUB_USER_NAME: ${{ vars.GITHUB_USER_NAME || 'awslabs-mcp' }}
 permissions:
   actions: none
   attestations: none
