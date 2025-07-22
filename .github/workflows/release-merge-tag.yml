@@ -1,6 +1,6 @@
 ---
 # Creates a tag on `main` when a PR is merged from a `release/**`
-name: Release v2 Merge
+name: Release v2 Merge (review)
 description: |
   This workflow creates a tag on the `main` branch when a pull request is merged from a `release/**` branch.
   It is triggered by the `pull_request` event with the `closed` type, specifically when the PR is merged.
