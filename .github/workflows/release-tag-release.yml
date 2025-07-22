@@ -1,6 +1,12 @@
 ---
-# When a tag with format `YYYY.MM.YYYYMMDDHHIISS` is pushed create a "Release"
-name: Release v2 Draft and Release (Automatic when tagged)
+name: Release v2 Release (automatic)
+description: |
+  This workflow drafts a release when a tag is pushed to the repository.
+  It checks for changes in specific directories and publishes packages to PyPI and npmjs if there are changes.
+  The release is created when the jobs succeed, and it includes generated release notes.
+
+  NOTE: The tag format must match `YYYY.MM.YYYYMMDDHHIISS` is pushed create a "Release"
+
 on:
   push:
     tags:
@@ -22,8 +28,14 @@ permissions:
   security-events: none
   statuses: none
 jobs:
+  purposely-not-running:
+    if: github.repository == (vars.REPOSITORY || 'awslabs/mcp')
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Testing this requires setting the vars.REPOSITORY if not in 'awslabs/mcp'"
   draft_release_when_tagged:
-    if: github.repository == ${{ vars.REPOSITORY || 'scottschreckengaust/mcp' }}
+    if: github.repository == ${{ vars.REPOSITORY || 'awslabs/mcp' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -46,6 +58,7 @@ jobs:
             --notes-file -
 
   look-for-changes:
+    if: github.repository == (vars.REPOSITORY || 'awslabs/mcp')
     env:
       ACTIONS_STEP_DEBUG: ${{ vars.ACTIONS_STEP_DEBUG || secrets.ACTIONS_STEP_DEBUG || 'false' }}
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
@@ -90,7 +103,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
 
   publish-npmjs:
-    if: github.repository == (vars.REPOSITORY || 'scottschreckengaust/mcp') && needs.look-for-changes.outputs.node-changed-directories != '[]' && needs.look-for-changes.outputs.node-changed-directories != ''
+    if: github.repository == (vars.REPOSITORY || 'awslabs/mcp') && needs.look-for-changes.outputs.node-changed-directories != '[]' && needs.look-for-changes.outputs.node-changed-directories != ''
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
     strategy:
@@ -108,7 +121,7 @@ jobs:
           echo "This job is not yet implemented. Please implement it to publish Python packages to PyPI."
 
   publish-pypi:
-    if: github.repository == (vars.REPOSITORY || 'scottschreckengaust/mcp') && needs.look-for-changes.outputs.python-changed-directories != '[]' && needs.look-for-changes.outputs.python-changed-directories != ''
+    if: github.repository == (vars.REPOSITORY || 'awslabs/mcp') && needs.look-for-changes.outputs.python-changed-directories != '[]' && needs.look-for-changes.outputs.python-changed-directories != ''
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
     strategy:
@@ -132,11 +145,11 @@ jobs:
             ./.github/actions/build-and-push-container-image
       - name: Install uv
         uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
-      # - name: Generate Embedding for aws-api-mcp-server
-      #   if: matrix.changed-directory == 'aws-api-mcp-server'
-      #   working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
-      #   run: |
-      #     uv run --frozen generate-embeddings
+      - name: Generate Embedding for aws-api-mcp-server
+        if: matrix.changed-directory == 'aws-api-mcp-server'
+        working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
+        run: |
+          uv run --frozen generate-embeddings
       - name: Build package
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
@@ -170,9 +183,8 @@ jobs:
           echo "Publishing ${{ matrix.changed-directory }}"
           ls -al dist
           docker image list
-
   release_when_successful:
-    if: github.repository == (vars.REPOSITORY || 'scottschreckengaust/mcp') && !failure() && !cancelled() && ( needs.publish-npmjs.result == 'success' || needs.publish-pypi.result == 'success')
+    if: github.repository == (vars.REPOSITORY || 'awslabs/mcp') && !failure() && !cancelled() && ( needs.publish-npmjs.result == 'success' || needs.publish-pypi.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write

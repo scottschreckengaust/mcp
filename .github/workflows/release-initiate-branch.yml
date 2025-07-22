@@ -1,12 +1,9 @@
 ---
-# Look for changes since the last release, bumps those versions, and creates a pull request.
-#
-# 1. Find directories that changed since the last release, or since first commit if no prior releases.
-# 2. If there are changes, then create a release branch formatted as `release/YYYY.MM.YYYYMMDDHHIISS`
-# 3. Now for each directory that changed, bump the package on the release branch
-# 4. Create a PR and watch it build.
-
 name: Release V2 Branch
+description: |
+  This workflow initiates a release branch when changes are detected in the source directory.
+  It finds changed directories since the last published release, creates a new branch,
+  bumps versions in changed directories, and creates a pull request for the changes.
 on:
   workflow_dispatch:
   schedule:
@@ -31,21 +28,6 @@ permissions:
   security-events: none
   statuses: none
 jobs:
-  hey:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - run: |
-          git --version
-          ls -al ~/.gnupg || echo "No GPG home" && mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
-          (command -v gpg && gpg --version && gpg --list-keys && gpg --list-secret-keys) || echo "GPG failed"
-          (command -v gpg-agent && gpg-agent --version) || echo "GPG agent failed"
-          (command -v pgrep && pgrep --version && pgrep -a -l -f "gpg-agent") || echo "GPG agent not running"
-          echo "$(tty) is the tty"
-          gpg --no-tty --batch --passphrase '${{ secrets.GPG_PASSPHRASE }}' --pinentry-mode loopback --allow-secret-key-import --import <(echo "${{ secrets.GPG_PRIVATE_KEY }}");
-          gpg --import-ownertrust <(echo "${{ secrets.GPG_KEY_ID }}:6:")
-          ls -al ~/.gnupg
-          (command -v gpg && gpg --version && gpg --list-keys && gpg --list-secret-keys) || echo "GPG failed"
   look-for-changes:
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
