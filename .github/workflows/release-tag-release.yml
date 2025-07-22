@@ -161,10 +161,9 @@ jobs:
         with:
           image: ${{ matrix.changed-directory }}
           version: ${{ steps.get-package-version.outputs.version }}
-          public-erc-role-to-assume: ${{ secrets.AWS_ROLE_ARN_TO_ASSUME || 'arn:aws:iam::123456789012:role/AssumeRoleForPublicECR'  }}
-          public-erc-registry-alias: 'a1c4e6g8' # 'f3y8w4n0' # 'w3i4n7u1'
+          public-erc-role-to-assume: ${{ secrets.AWS_ROLE_ARN_TO_ASSUME }}
+          public-erc-registry-alias: 'awslabs-mcp' # 'f3y8w4n0'
           public-erc-aws-region: ${{ env.AWS_REGION || 'us-east-1' }}
-          push: false
       - name: Test
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
