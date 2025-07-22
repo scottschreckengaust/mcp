@@ -149,7 +149,7 @@ jobs:
           gh pr create --base "${{ github.ref_name }}" --head "${{ needs.create-branch.outputs.release-branch }}" --title "chore: ${{ needs.create-branch.outputs.release-branch }}" --body "# ${{ needs.create-branch.outputs.release-branch }}
 
           triggered ${{ github.workflow}} by @${{ github.triggering_actor }} for @${{ github.actor }}
-  
+
           ## Acknowledgment
 
           By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of the [project license](https://github.com/awslabs/mcp/blob/main/LICENSE)."
