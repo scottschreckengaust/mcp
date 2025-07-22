@@ -27,11 +27,11 @@ permissions:
   statuses: none
 jobs:
   purposely-not-running:
-    if: github.repository == (vars.REPOSITORY || 'awslabs/mcp')
+    if: github.repository != (vars.REPOSITORY || 'awslabs/mcp')
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "Testing this requires setting the vars.REPOSITORY if not in 'awslabs/mcp'"
+          echo "Intentionally skipped, not intended to be run outside 'awslabs/mcp'"
   draft_release_when_tagged:
     if: github.repository == ${{ vars.REPOSITORY || 'awslabs/mcp' }}
     runs-on: ubuntu-latest
