@@ -129,6 +129,7 @@ jobs:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           sparse-checkout: |
             ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
+            ./.github/actions/build-and-push-container-image
       - name: Install uv
         uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
       # - name: Generate Embedding for aws-api-mcp-server
