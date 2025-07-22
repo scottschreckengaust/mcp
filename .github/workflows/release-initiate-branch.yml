@@ -125,7 +125,7 @@ jobs:
         run: |
           git add "${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}"
           git commit -m "chore: bump ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}" || echo "No changes to commit"
-          git pull
+          git pull --rebase
           git push
 
   create_pr:
