@@ -38,13 +38,14 @@ jobs:
       - run: |
           git --version
           ls -al ~/.gnupg || echo "No GPG home" && mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
-          command -v gpg && gpg --version && gpg --list-keys && gpg --list-secret-keys
-          command -v pgrep && pgrep -a -l -f "gpg-agent"
+          (command -v gpg && gpg --version && gpg --list-keys && gpg --list-secret-keys) || echo "GPG failed"
+          (command -v gpg-agent && gpg-agent --version) || echo "GPG agent failed"
+          (command -v pgrep && pgrep --version && pgrep -a -l -f "gpg-agent") || echo "GPG agent not running"
           echo "$(tty) is the tty"
-          ## install the private key temporarily (may need the passcode)
-          #gpg --homedir $TMP_GPG_SIGN_HOME --allow-secret-key-import --import $PRIVATE_KEY;
-          #gpg --allow-secret-key-import --import $PRIVATE_KEY;
-          #~/.gnupg/gpg-agent.conf
+          gpg --no-tty --batch --passphrase '${{ secrets.GPG_PASSPHRASE }}' --pinentry-mode loopback --allow-secret-key-import --import <(echo "${{ secrets.GPG_PRIVATE_KEY }}");
+          gpg --import-ownertrust <(echo "${{ secrets.GPG_OWNER_TRUST }}")
+          ls -al ~/.gnupg
+          (command -v gpg && gpg --version && gpg --list-keys && gpg --list-secret-keys) || echo "GPG failed"
   look-for-changes:
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
