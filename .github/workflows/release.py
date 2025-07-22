@@ -316,7 +316,9 @@ def cli():
 
 @cli.command('update-packages')
 @click.option('--directory', type=click.Path(exists=True, path_type=Path), default=Path.cwd())
-@click.option('--build-release', type=BuildRelease, default=None, help='Optional build release version')
+@click.option(
+    '--build-release', type=BuildRelease, default=None, help='Optional build release version'
+)
 @click.argument('git_hash', type=GIT_HASH)
 def update_packages(directory: Path, git_hash: GitHash, build_release: str | None = None) -> int:
     """Updates the package version with a patch."""
@@ -403,6 +405,7 @@ def bump_package(directory: Path) -> int:
         click.echo(f'{name}@{version}')
 
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(cli())
