@@ -166,8 +166,13 @@ jobs:
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
           echo "version=$(uv tree 2> /dev/null | grep awslabs | sed -e 's/^.*[[:space:]]v\(.*\)/\1/g')" >> $GITHUB_OUTPUT
+      - name: Publish package to PyPI
+        continue-on-error: true #TODO: EXPECTED TO WORK BUT UNTESTED
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+        with:
+          packages-dir: src/${{ matrix.package }}/dist
       - name: Build and Publish Container
-        continue-on-error: true #TODO: NOT SETUP YET SO THIS IS A TEMPORARY FIX
+        continue-on-error: true #TODO: EXPECTED TO WORK BUT UNTESTED
         id: build-and-publish
         uses: ./.github/actions/build-and-push-container-image #TODO: FIX THIS TO COMMIT HASH WHEN MERGED
         if: hashFiles(format('./{0}/{1}/Dockerfile', env.SRC_DIRECTORY, matrix.changed-directory))
@@ -177,11 +182,11 @@ jobs:
           public-erc-role-to-assume: ${{ secrets.AWS_ROLE_ARN_TO_ASSUME || 'arn:aws:iam::444455556666:role/Admin' }}
           public-erc-registry-alias: ${{ vars.REGISTRY_ALIAS || 'awslabs-mcp' }}
           public-erc-aws-region: ${{ env.AWS_REGION || 'us-east-1' }}
-      - name: Test
+      - name: Listing Generated Assets
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
           echo "Publishing ${{ matrix.changed-directory }}"
-          ls -al dist
+          ls -l dist
           docker image list
   release_when_successful:
     if: github.repository == (vars.REPOSITORY || 'awslabs/mcp') && !failure() && !cancelled() && ( needs.publish-npmjs.result == 'success' || needs.publish-pypi.result == 'success')
