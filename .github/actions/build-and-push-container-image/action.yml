@@ -47,11 +47,19 @@ inputs:
     description: 'The region to login'
     type: string
     required: false
+  push:
+    default: false
+    description: 'Whether to push the image'
+    type: boolean
+    required: false
 
 outputs:
   version:
     description: 'The version uploaded'
     value: ${{ steps.get-version.outputs.version }}
+  artifact:
+    description: 'The artifact uploaded'
+    value: ${{ steps.upload-image.outputs.artifact-id }}
 
 runs:
   using: "composite"
@@ -119,8 +127,8 @@ runs:
         tags: public.ecr.aws/${{ inputs.public-erc-registry-alias }}/${{ github.repository_owner }}/${{ inputs.image }}
         context: ./src/${{ inputs.image }}
         file: ./src/${{ inputs.image }}/Dockerfile
-        push: true
-        outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+        push: ${{ fromJson(inputs.push) == false && 'false' || 'true' }}
+        outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ fromJson(inputs.push) == false && 'false' || 'true' }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         github-token: ${{ inputs.github-container-registry-token }}
@@ -147,7 +155,7 @@ runs:
         ALIAS: ${{ inputs.public-erc-registry-alias }}
         OWNER: ${{ github.repository_owner }}
       run: |
-        docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+        docker buildx imagetools create ${{ fromJson(inputs.push) == false && '--dry-run' || '' }} $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
           $(printf 'public.ecr.aws/'$ALIAS'/'$OWNER'/'$IMAGE'@sha256:%s ' *)
       shell: bash
     - name: Inspect image
@@ -165,3 +173,15 @@ runs:
       run: |
         echo version="${{ steps.meta.outputs.version }}" >>"$GITHUB_OUTPUT"
       shell: bash
+    - name: Save an image
+      run: |
+        docker image save -o "${{ runner.temp }}/${{ inputs.image }}.tar" public.ecr.aws/$ALIAS/$OWNER/$IMAGE:$VERSION
+      shell: bash
+    - name: Upload image
+      id: upload-image
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: image-${{ inputs.image }}
+        path: ${{ runner.temp }}/${{ inputs.image }}.tar
+        if-no-files-found: error
+        retention-days: 1
