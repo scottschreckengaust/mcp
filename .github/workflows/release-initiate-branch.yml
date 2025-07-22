@@ -96,7 +96,7 @@ jobs:
       fail-fast: true
       matrix:
         changed-directory: ${{ fromJson(needs.look-for-changes.outputs.changed-directories) }}
-      max-parallel: 1 # so a linear commit history is created
+      max-parallel: 10 # so a linear commit history is created
     runs-on: ubuntu-latest
     permissions:
       contents: write
