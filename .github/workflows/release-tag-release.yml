@@ -90,11 +90,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
 
   publish-npmjs:
-    if: github.repository == ${{ vars.REPOSITORY || 'scottschreckengaust/mcp' }} && needs.look-for-changes.outputs.node-changed-directories != '[]' && needs.look-for-changes.outputs.node-changed-directories != ''
+    if: github.repository == (vars.REPOSITORY || 'scottschreckengaust/mcp') && needs.look-for-changes.outputs.node-changed-directories != '[]' && needs.look-for-changes.outputs.node-changed-directories != ''
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         changed-directory: ${{ fromJson(needs.look-for-changes.outputs.node-changed-directories) }}
       max-parallel: 10
@@ -108,11 +108,11 @@ jobs:
           echo "This job is not yet implemented. Please implement it to publish Python packages to PyPI."
 
 #   publish-container:
-#     if: github.repository == ${{ vars.REPOSITORY || 'scottschreckengaust/mcp' }} && needs.look-for-changes.outputs.docker-changed-directories != '[]' && needs.look-for-changes.outputs.docker-changed-directories != ''
+#     if: github.repository == (vars.REPOSITORY || 'scottschreckengaust/mcp') && needs.look-for-changes.outputs.docker-changed-directories != '[]' && needs.look-for-changes.outputs.docker-changed-directories != ''
 #     env:
 #       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
 #     strategy:
-#       fail-fast: true
+#       fail-fast: false
 #       matrix:
 #         changed-directory: ${{ fromJson(needs.look-for-changes.outputs.docker-changed-directories) }}
 #       max-parallel: 10
@@ -126,11 +126,11 @@ jobs:
 #           echo "This job is not yet implemented. Please implement it to publish Python packages to PyPI."
 
   publish-pypi:
-    if: github.repository == ${{ vars.REPOSITORY || 'scottschreckengaust/mcp' }} && needs.look-for-changes.outputs.python-changed-directories != '[]' && needs.look-for-changes.outputs.python-changed-directories != ''
+    if: github.repository == (vars.REPOSITORY || 'scottschreckengaust/mcp') && needs.look-for-changes.outputs.python-changed-directories != '[]' && needs.look-for-changes.outputs.python-changed-directories != ''
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         changed-directory: ${{ fromJson(needs.look-for-changes.outputs.python-changed-directories) }}
       max-parallel: 10
@@ -192,7 +192,7 @@ jobs:
           docker image list
 
   release_when_successful:
-    if: github.repository == ${{ vars.REPOSITORY || 'scottschreckengaust/mcp' }} && !failure() && !cancelled() && ( needs.publish-npmjs.result == 'success' || needs.publish-pypi.result == 'success')
+    if: github.repository == (vars.REPOSITORY || 'scottschreckengaust/mcp') && !failure() && !cancelled() && ( needs.publish-npmjs.result == 'success' || needs.publish-pypi.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write
