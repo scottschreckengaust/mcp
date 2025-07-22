@@ -4,9 +4,7 @@ description: |
   This workflow drafts a release when a tag is pushed to the repository.
   It checks for changes in specific directories and publishes packages to PyPI and npmjs if there are changes.
   The release is created when the jobs succeed, and it includes generated release notes.
-
-  NOTE: The tag format must match `YYYY.MM.YYYYMMDDHHIISS` is pushed create a "Release"
-
+  NOTE: The tag format must match `YYYY.MM.YYYYMMDDHHIISS` to complete a "Release"
 on:
   push:
     tags:
@@ -56,7 +54,6 @@ jobs:
           cat RELEASE_NOTES.md GENERATED_NOTES.md | gh release edit "$VERSION" \
             --draft=true \
             --notes-file -
-
   look-for-changes:
     if: github.repository == (vars.REPOSITORY || 'awslabs/mcp')
     env:
@@ -101,7 +98,6 @@ jobs:
           echo "docker-changed-directories=$DOCKER_CHANGED_DIRECTORIES"
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-
   publish-npmjs:
     if: github.repository == (vars.REPOSITORY || 'awslabs/mcp') && needs.look-for-changes.outputs.node-changed-directories != '[]' && needs.look-for-changes.outputs.node-changed-directories != ''
     env:
@@ -119,7 +115,6 @@ jobs:
       - name: TBD
         run: |
           echo "This job is not yet implemented. Please implement it to publish Python packages to PyPI."
-
   publish-pypi:
     if: github.repository == (vars.REPOSITORY || 'awslabs/mcp') && needs.look-for-changes.outputs.python-changed-directories != '[]' && needs.look-for-changes.outputs.python-changed-directories != ''
     env:
