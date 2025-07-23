@@ -1,5 +1,5 @@
 ---
-name: Release v2 Merge
+name: Release v2 Merge (review)
 description: |
   This workflow creates a tag on the `main` branch when a pull request is merged from a `release/**` branch.
   It is triggered by the `pull_request` event with the `closed` type, specifically when the PR is merged.
@@ -38,9 +38,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
-    environment:
-      name: release
-      url: https://github.com/${{ github.repository }}/releases/tag/${{ steps.validate-and-extract-tag.outputs.tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

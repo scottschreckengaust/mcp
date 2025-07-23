@@ -1,8 +1,5 @@
 ---
-# This workflow initiates a release branch when changes are detected in the source directory.
-# It finds changed directories since the last published release, creates a new branch,
-# bumps versions in changed directories, and creates a pull request for the changes.
-name: Release V2 Branch (security-hardened)
+name: Release V2 Branch (scheduled)
 description: |
   This workflow initiates a release branch when changes are detected in the source directory.
   It finds changed directories since the last published release, creates a new branch,
