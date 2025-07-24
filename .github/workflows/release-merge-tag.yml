@@ -1,10 +1,9 @@
 ---
-name: Release v2 Merge (review)
+name: Release v2 Merge (automated)
 description: |
   This workflow creates a tag on the `main` branch when a pull request is merged from a `release/**` branch.
   It is triggered by the `pull_request` event with the `closed` type, specifically when the PR is merged.
   The tag will be signed using GPG and pushed to the repository.
-  This workflow is intended for a protected environment for approval or rejection.
 on:
   pull_request:
     types:
