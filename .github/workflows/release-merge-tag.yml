@@ -157,8 +157,10 @@ jobs:
             exit 1
           fi
 
-          echo "::debug::Successfully created and pushed signed tag: $TAG"
           echo "tag-created=true" >> $GITHUB_OUTPUT
+          echo "::debug::Successfully created and pushed signed tag: $TAG"
+          echo "### :pushpin: Merge Tagged" >> $GITHUB_STEP_SUMMARY
+          echo "[$TAG] create so watch the [workflow](https://github.com/${{ github.repository }}/actions/workflows/release-tag-release.yml)" >> $GITHUB_STEP_SUMMARY
       - name: Secure cleanup
         if: always()
         run: |
