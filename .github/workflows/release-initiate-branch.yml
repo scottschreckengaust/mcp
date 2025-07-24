@@ -125,7 +125,6 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
-
       - name: Create release branch
         id: make-a-branch
         run: |
@@ -165,7 +164,6 @@ jobs:
 
           echo "release-branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
           echo "::notice::Successfully created release branch: $RELEASE_BRANCH"
-
   bump-changed-directories:
     name: bump
     env:
@@ -178,7 +176,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     permissions:
-      contents: write  # SECURITY: Only for committing changes
+      contents: write
     needs: [look-for-changes, create-branch]
     steps:
       - name: Checkout repository
@@ -189,7 +187,6 @@ jobs:
           sparse-checkout: |
             ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
             .github/workflows/release.py
-
       - name: Validate changed directory
         run: |
           set -euo pipefail
@@ -221,10 +218,8 @@ jobs:
           fi
 
           echo "::notice::Directory validated: $FULL_PATH"
-
       - name: Install uv
         uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
-
       - name: Bump package version
         run: |
           set -euo pipefail
@@ -236,8 +231,6 @@ jobs:
           uv run --script .github/workflows/release.py bump-package --directory="$DIRECTORY"
 
           echo "::notice::Version bump completed for: $DIRECTORY"
-
-      # Secure GPG configuration
       - name: Configure Git and GPG securely
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -271,7 +264,6 @@ jobs:
             --sign --armor --local-user "$GPG_KEY_ID" <<< "$GPG_PASSPHRASE" > /dev/null
 
           echo "::notice::GPG configuration completed successfully"
-
       - name: Commit and push changes
         env:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
@@ -305,29 +297,18 @@ jobs:
 
             echo "::notice::Successfully committed and pushed changes for: $DIRECTORY"
           fi
-
-      # Always cleanup sensitive data
-      - name: Secure cleanup
+      - name: Secure GPG cleanup
         if: always()
         run: |
           set +e  # Don't fail on cleanup errors
-
           echo "::notice::Performing secure cleanup"
-
-          # SECURITY: Clean up GPG directory
           if [[ -n "${GNUPGHOME:-}" && -d "$GNUPGHOME" ]]; then
             rm -rf "$GNUPGHOME"
             echo "::notice::Cleaned up GPG directory"
           fi
-
-          # Kill GPG agent
           gpgconf --kill gpg-agent 2>/dev/null || true
-
-          # Clear environment variables
           unset GPG_PRIVATE_KEY GPG_PASSPHRASE GPG_KEY_ID GNUPGHOME 2>/dev/null || true
-
           echo "::notice::Secure cleanup completed"
-
   create_pr:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -335,14 +316,12 @@ jobs:
       pull-requests: write
       contents: read
     needs: [look-for-changes, create-branch, bump-changed-directories]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           ref: ${{ needs.create-branch.outputs.release-branch }}
-
       - name: Create pull request
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
@@ -381,8 +360,6 @@ jobs:
           By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of the [project license](https://github.com/awslabs/mcp/blob/main/LICENSE)."
 
           echo "::notice::Successfully created pull request"
-
-      # Audit logging step
       - name: Security audit log
         if: always()
         run: |
