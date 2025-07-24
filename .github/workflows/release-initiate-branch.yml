@@ -108,8 +108,7 @@ jobs:
             jq -R -s -c 'split("\n")[:-1] | map(select(length > 0))')"
 
           echo "changed-directories=$SRC_DIRECTORIES" >> $GITHUB_OUTPUT
-          echo "::notice::Found changed directories: $SRC_DIRECTORIES"
-
+          echo "::debug::Found changed directories: $SRC_DIRECTORIES"
   create-branch:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -119,7 +118,6 @@ jobs:
       release-branch: ${{ steps.make-a-branch.outputs.release-branch }}
     needs: [look-for-changes]
     if: ${{ needs.look-for-changes.outputs.changed-directories != '[]' && needs.look-for-changes.outputs.changed-directories != '' }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -163,7 +161,7 @@ jobs:
           fi
 
           echo "release-branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
-          echo "::notice::Successfully created release branch: $RELEASE_BRANCH"
+          echo "::debug::Successfully created release branch: $RELEASE_BRANCH"
   bump-changed-directories:
     name: bump
     env:
@@ -184,7 +182,7 @@ jobs:
       - name: Bump package version
         run: |
           set -euo pipefail
-          echo "${{ fromJson(needs.look-for-changes.outputs.changed-directories) }}" | \
+          echo "${{ toJson(needs.look-for-changes.outputs.changed-directories) }}" | \
             jq -r '.[]' | \
             xargs -I{} \
             uv run --script .github/workflows/release.py bump-package --directory="$SRC_DIRECTORY/{}"
@@ -314,11 +312,13 @@ jobs:
           ## Acknowledgment
           By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of the [project license](https://github.com/awslabs/mcp/blob/main/LICENSE).")"
 
-          echo "::notice::Successfully created pull request $PR_URL"
+          echo "::debug::Successfully created pull request $PR_URL"
+          echo "### :rocket: $RELEASE_BRANCH pull request ready" >> $GITHUB_STEP_SUMMARY
+          echo "$PR_URL" >> $GITHUB_STEP_SUMMARY
       - name: Security audit log
         if: always()
         run: |
-          echo "::notice::=== SECURITY AUDIT LOG ===
+          echo "=== SECURITY AUDIT LOG ===
           Workflow: ${{ github.workflow }}
           Run ID: ${{ github.run_id }}
           Actor: ${{ github.actor }}
