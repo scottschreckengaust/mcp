@@ -29,6 +29,7 @@ permissions:
   statuses: none
 jobs:
   look-for-changes:
+    name: Changes Since Last Release
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
     outputs:
@@ -110,6 +111,7 @@ jobs:
           echo "changed-directories=$SRC_DIRECTORIES" >> $GITHUB_OUTPUT
           echo "::debug::Found changed directories: $SRC_DIRECTORIES"
   create-branch:
+    name: Create Release Branch
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -163,7 +165,7 @@ jobs:
           echo "release-branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
           echo "::debug::Successfully created release branch: $RELEASE_BRANCH"
   bump-changed-directories:
-    name: bump
+    name: Bump Versions
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
     runs-on: ubuntu-latest
@@ -263,6 +265,7 @@ jobs:
           unset GPG_PRIVATE_KEY GPG_PASSPHRASE GPG_KEY_ID GNUPGHOME 2>/dev/null || true
           echo "::debug::Secure cleanup completed"
   create_pr:
+    name: Create Pull Request
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -313,8 +316,8 @@ jobs:
           By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of the [project license](https://github.com/awslabs/mcp/blob/main/LICENSE).")"
 
           echo "::debug::Successfully created pull request $PR_URL"
-          echo "### :rocket: $RELEASE_BRANCH pull request ready" >> $GITHUB_STEP_SUMMARY
-          echo "$PR_URL" >> $GITHUB_STEP_SUMMARY
+          echo "### :rocket: Ready for Review" >> $GITHUB_STEP_SUMMARY
+          echo "$PR_URL created for $RELEASE_BRANCH" >> $GITHUB_STEP_SUMMARY
       - name: Security audit log
         if: always()
         run: |
