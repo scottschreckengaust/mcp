@@ -45,9 +45,9 @@ jobs:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           fetch-depth: 0
       - name: Validate release branch and extract tag
-        id: validate-and-extract-tag
         env:
           BRANCH_REF: ${{ github.event.pull_request.head.ref }}
+        id: validate-and-extract-tag
         run: |
           set -euo pipefail
 
