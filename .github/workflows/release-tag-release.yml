@@ -1,10 +1,11 @@
 ---
-name: Release v2 Release (automated)
+name: Release v2 Release (approval)
 description: |
   This workflow drafts a release when a tag is pushed to the repository.
   It checks for changes in specific directories and publishes packages to PyPI and npmjs if there are changes.
   The release is created when the jobs succeed, and it includes generated release notes.
   NOTE: The tag format must match `YYYY.MM.YYYYMMDDHHIISS` to complete a "Release"
+  This workflow is intended for a protected environment for approval or rejection.
 on:
   push:
     tags:
@@ -80,7 +81,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
-    needs: [validate-repository]
+    needs: [validate-repository,look-for-changes]
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
