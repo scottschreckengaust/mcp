@@ -394,11 +394,13 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "::debug::Package version: $VERSION"
       - name: Publish package to PyPI
+        continue-on-error: true #TODO: Remove when merged into main
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         with:
           packages-dir: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}/dist
           print-hash: true
       - name: Build and Publish Container
+        continue-on-error: true #TODO: Remove when merged into main
         id: build-and-publish
         uses: ./.github/actions/build-and-push-container-image
         if: hashFiles(format('./{0}/{1}/Dockerfile', env.SRC_DIRECTORY, matrix.changed-directory))
