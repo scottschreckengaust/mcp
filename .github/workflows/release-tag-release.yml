@@ -27,6 +27,7 @@ permissions:
   statuses: none
 jobs:
   validate-repository:
+    name: Validate Repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -43,9 +44,9 @@ jobs:
           AUTHORIZED_REPO="${{ vars.REPOSITORY || 'awslabs/mcp' }}"
           TAG_NAME="${{ github.ref_name }}"
 
-          echo "::notice::Validating repository: $CURRENT_REPO"
-          echo "::notice::Authorized repository: $AUTHORIZED_REPO"
-          echo "::notice::Tag: $TAG_NAME"
+          echo "::debug::Validating repository: $CURRENT_REPO"
+          echo "::debug::Authorized repository: $AUTHORIZED_REPO"
+          echo "::debug::Tag: $TAG_NAME"
 
           # Validate tag format
           if [[ ! "$TAG_NAME" =~ ^[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
@@ -57,10 +58,10 @@ jobs:
           # Check repository authorization
           if [[ "$CURRENT_REPO" == "$AUTHORIZED_REPO" ]]; then
             echo "is-authorized-repo=true" >> $GITHUB_OUTPUT
-            echo "::notice::Repository authorized for release"
+            echo "::debug::Repository authorized for release"
           else
             echo "is-authorized-repo=false" >> $GITHUB_OUTPUT
-            echo "::notice::Repository not authorized for release: $CURRENT_REPO"
+            echo "::debug::Repository not authorized for release: $CURRENT_REPO"
           fi
   skip-unauthorized:
     if: needs.validate-repository.outputs.is-authorized-repo != 'true'
@@ -70,9 +71,10 @@ jobs:
     steps:
       - name: Skip unauthorized repository
         run: |
-          echo "::notice::Intentionally skipped - not intended to be run outside '${{ vars.REPOSITORY || 'awslabs/mcp' }}'"
-          echo "::notice::Current repository: ${{ github.repository }}"
+          echo "::debug::Intentionally skipped - not intended to be run outside '${{ vars.REPOSITORY || 'awslabs/mcp' }}'"
+          echo "::debug::Current repository: ${{ github.repository }}"
   draft_release_when_tagged:
+    name: Draft Release
     if: needs.validate-repository.outputs.is-authorized-repo == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -90,7 +92,7 @@ jobs:
           set -euo pipefail
 
           VERSION="${{ github.ref_name }}"
-          echo "::notice::Creating draft release for version: $VERSION"
+          echo "::debug::Creating draft release for version: $VERSION"
 
           # Validate version format again
           if [[ ! "$VERSION" =~ ^[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
@@ -119,8 +121,9 @@ jobs:
             --draft=true \
             --notes-file -
 
-          echo "::notice::Successfully created draft release: $VERSION"
+          echo "::debug::Successfully created draft release: $VERSION"
   look-for-changes:
+    name: Look for Changes Since Last Published Release
     if: needs.validate-repository.outputs.is-authorized-repo == 'true'
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
@@ -145,7 +148,7 @@ jobs:
           set -euo pipefail  # SECURITY: Strict error handling
 
           SRC_DIR="${{ env.SRC_DIRECTORY }}"
-          echo "::notice::Validating source directory: $SRC_DIR"
+          echo "::debug::Validating source directory: $SRC_DIR"
 
           # Validate directory name format
           if [[ ! "$SRC_DIR" =~ ^[a-zA-Z0-9_-]+$ ]]; then
@@ -159,7 +162,7 @@ jobs:
             exit 1
           fi
 
-          echo "::notice::Source directory validated: $SRC_DIR"
+          echo "::debug::Source directory validated: $SRC_DIR"
       - name: Find Changed Directories Since Last Published Release
         id: find-changed-directories
         env:
@@ -167,7 +170,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "::notice::Finding changed directories since last published release"
+          echo "::debug::Finding changed directories since last published release"
 
           # Get last published release with validation
           SINCE="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName | jq -r '.[].tagName // empty')"
@@ -176,7 +179,7 @@ jobs:
             echo "::warning::No previous published release found, using initial commit" >&2
             SINCE="$(git rev-list --max-parents=0 HEAD)"
           else
-            echo "::notice::Comparing against published release: $SINCE"
+            echo "::debug::Comparing against published release: $SINCE"
 
             # Validate tag exists
             if ! git rev-parse "$SINCE" >/dev/null 2>&1; then
@@ -236,11 +239,12 @@ jobs:
           echo "node-changed-directories=$NODE_CHANGED_DIRECTORIES" >> $GITHUB_OUTPUT
           echo "docker-changed-directories=$DOCKER_CHANGED_DIRECTORIES" >> $GITHUB_OUTPUT
 
-          echo "::notice::Found changed directories: $SRC_DIRECTORIES"
-          echo "::notice::Python packages: $PYTHON_CHANGED_DIRECTORIES"
-          echo "::notice::Node packages: $NODE_CHANGED_DIRECTORIES"
-          echo "::notice::Docker packages: $DOCKER_CHANGED_DIRECTORIES"
+          echo "::debug::Found changed directories: $SRC_DIRECTORIES"
+          echo "::debug::Python packages: $PYTHON_CHANGED_DIRECTORIES"
+          echo "::debug::Node packages: $NODE_CHANGED_DIRECTORIES"
+          echo "::debug::Docker packages: $DOCKER_CHANGED_DIRECTORIES"
   publish-npmjs:
+    name: Publish to NPMjs
     if: needs.validate-repository.outputs.is-authorized-repo == 'true' && needs.look-for-changes.outputs.node-changed-directories != '[]' && needs.look-for-changes.outputs.node-changed-directories != ''
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
@@ -261,7 +265,7 @@ jobs:
           set -euo pipefail
 
           CHANGED_DIR="${{ matrix.changed-directory }}"
-          echo "::notice::Validating Node.js package directory: $CHANGED_DIR"
+          echo "::debug::Validating Node.js package directory: $CHANGED_DIR"
 
           # Validate directory name format
           if [[ ! "$CHANGED_DIR" =~ ^[a-zA-Z0-9_-]+$ ]]; then
@@ -269,17 +273,9 @@ jobs:
             exit 1
           fi
 
-          echo "::notice::Directory validated: $CHANGED_DIR"
-      - name: Placeholder for NPM publishing
-        run: |
-          echo "::notice::NPM publishing not yet implemented for: ${{ matrix.changed-directory }}"
-          echo "::notice::This job serves as a placeholder for future NPM package publishing"
-          echo "::notice::When implemented, this will include:"
-          echo "::notice::- Package validation and security scanning"
-          echo "::notice::- Secure authentication with NPM registry"
-          echo "::notice::- Version verification and conflict detection"
-          echo "::notice::- Comprehensive audit logging"
+          echo "::debug::Directory validated: $CHANGED_DIR"
   publish-pypi:
+    name: Publish to PyPI
     if: needs.validate-repository.outputs.is-authorized-repo == 'true' && needs.look-for-changes.outputs.python-changed-directories != '[]' && needs.look-for-changes.outputs.python-changed-directories != ''
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
@@ -316,7 +312,7 @@ jobs:
           CHANGED_DIR="${{ matrix.changed-directory }}"
           FULL_PATH="${{ env.SRC_DIRECTORY }}/$CHANGED_DIR"
 
-          echo "::notice::Validating Python package directory: $FULL_PATH"
+          echo "::debug::Validating Python package directory: $FULL_PATH"
 
           # Validate directory name format
           if [[ ! "$CHANGED_DIR" =~ ^[a-zA-Z0-9_-]+$ ]]; then
@@ -345,7 +341,7 @@ jobs:
             exit 1
           fi
 
-          echo "::notice::Directory validated: $FULL_PATH"
+          echo "::debug::Directory validated: $FULL_PATH"
       - name: Install uv
         uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
       # Long running step with timeout protection
@@ -355,16 +351,16 @@ jobs:
         timeout-minutes: 180
         run: |
           set -euo pipefail
-          echo "::notice::Generating embeddings for aws-api-mcp-server"
+          echo "::debug::Generating embeddings for aws-api-mcp-server"
           uv run --frozen generate-embeddings
-          echo "::notice::Embedding generation completed"
+          echo "::debug::Embedding generation completed"
       - name: Build package
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
           set -euo pipefail
-          echo "::notice::Building package: ${{ matrix.changed-directory }}"
+          echo "::debug::Building package: ${{ matrix.changed-directory }}"
           uv build
-          echo "::notice::Package build completed"
+          echo "::debug::Package build completed"
       - name: Upload distribution
         id: upload-distribution
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -394,7 +390,7 @@ jobs:
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "::notice::Package version: $VERSION"
+          echo "::debug::Package version: $VERSION"
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         with:
@@ -410,28 +406,20 @@ jobs:
           public-erc-role-to-assume: ${{ secrets.AWS_ROLE_ARN_TO_ASSUME || 'arn:aws:iam::444455556666:role/Admin' }}
           public-erc-registry-alias: ${{ vars.REGISTRY_ALIAS || 'awslabs-mcp' }}
           public-erc-aws-region: ${{ env.AWS_REGION || 'us-east-1' }}
-      - name: List Generated Assets
+      - name: Distributions Summary
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
           set -euo pipefail
-          echo "::notice::Publishing completed for: ${{ matrix.changed-directory }}"
-          echo "::notice::Distribution files:"
+          echo "::debug::Publishing completed for: ${{ matrix.changed-directory }}"
+          echo "::debug::Distribution files:"
           ls -la dist/ || echo "No dist directory found"
-          echo "::notice::Docker images:"
+          echo "### :package: Published" >> $GITHUB_STEP_SUMMARY
+          echo "* [PyPi](https://pypi.org/project/awslabs.${{ matrix.changed-directory }})" >> $GITHUB_STEP_SUMMARY
+          echo "::debug::Docker images:"
           docker images || echo "No Docker images found"
-      - name: Package publishing audit log
-        if: always()
-        run: |
-          echo "::notice::=== PACKAGE PUBLISHING AUDIT LOG ==="
-          echo "::notice::Package: ${{ matrix.changed-directory }}"
-          echo "::notice::Version: ${{ steps.get-package-version.outputs.version }}"
-          echo "::notice::Repository: ${{ github.repository }}"
-          echo "::notice::Tag: ${{ github.ref_name }}"
-          echo "::notice::Actor: ${{ github.actor }}"
-          echo "::notice::Run ID: ${{ github.run_id }}"
-          echo "::notice::Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          echo "::notice::=== END AUDIT LOG ==="
+          docker images --filter=reference="public.ecr.aws/awslabs-mcp/awslabs/core-mcp-server" --format '{{ json . }}' | jq -r '"* [Public ECR](https://gallery.ecr.aws/awslabs-mcp/awslabs/${{ matrix.changed-directory }}"'  >> $GITHUB_STEP_SUMMARY"
   release_when_successful:
+    name: Publish Release
     if: needs.validate-repository.outputs.is-authorized-repo == 'true' && !failure() && !cancelled() && (needs.publish-npmjs.result == 'success' || needs.publish-pypi.result == 'success' || (needs.publish-npmjs.result == 'skipped' && needs.publish-pypi.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -449,7 +437,7 @@ jobs:
           set -euo pipefail
 
           VERSION="${{ github.ref_name }}"
-          echo "::notice::Publishing release: $VERSION"
+          echo "::debug::Publishing release: $VERSION"
 
           # Validate version format
           if [[ ! "$VERSION" =~ ^[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
@@ -466,15 +454,7 @@ jobs:
           # Publish the release
           gh release edit "$VERSION" --draft=false
 
-          echo "::notice::Successfully published release: $VERSION"
-      - name: Release audit log
-        if: always()
-        run: |
-          echo "::notice::=== RELEASE AUDIT LOG ==="
-          echo "::notice::Release: ${{ github.ref_name }}"
-          echo "::notice::Repository: ${{ github.repository }}"
-          echo "::notice::Actor: ${{ github.actor }}"
-          echo "::notice::Run ID: ${{ github.run_id }}"
-          echo "::notice::Published: ${{ steps.create-release.outcome == 'success' }}"
-          echo "::notice::Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          echo "::notice::=== END AUDIT LOG ==="
+          echo "::debug::Successfully published release: $VERSION"
+          echo "### :rocket: Released" >> $GITHUB_STEP_SUMMARY
+          echo "[$VERSION](https://github.com/${{ github.repository }}/releases/tag/$VERSION)" >> $GITHUB_STEP_SUMMARY
+
