@@ -50,7 +50,7 @@ jobs:
           set -euo pipefail
 
           BRANCH_REF="${{ github.event.pull_request.head.ref }}"
-          echo "::notice::Processing release branch: $BRANCH_REF"
+          echo "::debug::Processing release branch: $BRANCH_REF"
 
           # Validate branch format (YYYY.MM.YYYYMMDDHHIISS)
           if [[ ! "$BRANCH_REF" =~ ^release/[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
@@ -81,7 +81,7 @@ jobs:
           fi
 
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "::notice::Validated tag: $TAG"
+          echo "::debug::Validated tag: $TAG"
       - name: Configure Git and GPG securely
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -95,7 +95,7 @@ jobs:
           chmod 700 "$GNUPGHOME"
           echo "GNUPGHOME=$GNUPGHOME" >> $GITHUB_ENV
 
-          echo "::notice::Setting up secure GPG environment"
+          echo "::debug::Setting up secure GPG environment"
 
           # Configure git user (non-sensitive information)
           git config --local user.email "${{ env.GITHUB_USER_EMAIL }}"
@@ -114,7 +114,7 @@ jobs:
           echo "test" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
             --sign --armor --local-user "$GPG_KEY_ID" <<< "$GPG_PASSPHRASE" > /dev/null
 
-          echo "::notice::GPG configuration completed successfully"
+          echo "::debug::GPG configuration completed successfully"
       - name: Create and push signed tag
         id: create-tag
         env:
@@ -123,7 +123,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "::notice::Creating signed tag: $TAG"
+          echo "::debug::Creating signed tag: $TAG"
 
           # SECURITY: Validate tag variable is set
           if [[ -z "$TAG" ]]; then
@@ -153,19 +153,19 @@ jobs:
             exit 1
           fi
 
-          echo "::notice::Successfully created and pushed signed tag: $TAG"
+          echo "::debug::Successfully created and pushed signed tag: $TAG"
           echo "tag-created=true" >> $GITHUB_OUTPUT
       - name: Secure cleanup
         if: always()
         run: |
           set +e
 
-          echo "::notice::Performing secure cleanup"
+          echo "::debug::Performing secure cleanup"
 
           # Clean up GPG directory
           if [[ -n "${GNUPGHOME:-}" && -d "$GNUPGHOME" ]]; then
             rm -rf "$GNUPGHOME"
-            echo "::notice::Cleaned up GPG directory"
+            echo "::debug::Cleaned up GPG directory"
           fi
 
           # Kill GPG agent
@@ -174,17 +174,17 @@ jobs:
           # Clear environment variables
           unset GPG_PRIVATE_KEY GPG_PASSPHRASE GPG_KEY_ID GNUPGHOME 2>/dev/null || true
 
-          echo "::notice::Secure cleanup completed"
+          echo "::debug::Secure cleanup completed"
       - name: Security audit log
         if: always()
         run: |
-          echo "::notice::=== SECURITY AUDIT LOG ==="
-          echo "::notice::Workflow: ${{ github.workflow }}"
-          echo "::notice::Run ID: ${{ github.run_id }}"
-          echo "::notice::Actor: ${{ github.actor }}"
-          echo "::notice::Repository: ${{ github.repository }}"
-          echo "::notice::Branch: ${{ github.event.pull_request.head.ref }}"
-          echo "::notice::Tag: ${{ steps.validate-and-extract-tag.outputs.tag }}"
-          echo "::notice::Tag Created: ${{ steps.create-tag.outputs.tag-created }}"
-          echo "::notice::Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          echo "::notice::=== END AUDIT LOG ==="
+          echo "=== SECURITY AUDIT LOG ===
+          Workflow: ${{ github.workflow }}
+          Run ID: ${{ github.run_id }}
+          Actor: ${{ github.actor }}
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.event.pull_request.head.ref }}
+          Tag: ${{ steps.validate-and-extract-tag.outputs.tag }}
+          Tag Created: ${{ steps.create-tag.outputs.tag-created }}
+          Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          === END AUDIT LOG ==="
