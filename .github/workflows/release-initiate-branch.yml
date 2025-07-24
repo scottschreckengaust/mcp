@@ -293,7 +293,7 @@ jobs:
             exit 1
           fi
 
-          CHANGED_ITEMS="$(echo "${{ needs.look-for-changes.outputs.changed-directories }}" | jq -r '"* " + .[]')"
+          CHANGED_ITEMS="$(echo '${{ needs.look-for-changes.outputs.changed-directories }}' | jq -r '"* " + .[]')"
 
           # Create PR with validated content
           PR_URL="$(gh pr create \
