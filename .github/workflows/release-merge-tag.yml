@@ -31,6 +31,7 @@ permissions:
   statuses: none
 jobs:
   tag_on_release_merge:
+    name: Tag the Merged Release
     if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -122,6 +123,7 @@ jobs:
         id: create-tag
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
           TAG: ${{ steps.validate-and-extract-tag.outputs.tag }}
         run: |
           set -euo pipefail
