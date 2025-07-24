@@ -413,11 +413,12 @@ jobs:
       - name: List Generated Assets
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
+          set -euo pipefail
           echo "::notice::Publishing completed for: ${{ matrix.changed-directory }}"
           echo "::notice::Distribution files:"
           ls -la dist/ || echo "No dist directory found"
           echo "::notice::Docker images:"
-          docker image list | grep "${{ matrix.changed-directory }}" || echo "No Docker images found"
+          docker images || echo "No Docker images found"
       - name: Package publishing audit log
         if: always()
         run: |
