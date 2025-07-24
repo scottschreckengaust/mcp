@@ -40,9 +40,9 @@ Version = NewType('Version', str)
 SemVerRegEx = r'^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
 PACKAGE_NAME_REGEX = r'^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]$'
 DIRECTORY_NAME_REGEX = r'^[a-zA-Z0-9_-]+$'
-MAX_VERSION_COMPONENT = 999999999
+MAX_VERSION_COMPONENT = 9999999999999999999
 MAX_PACKAGE_NAME_LENGTH = 100
-MAX_PATH_DEPTH = 10
+MAX_PATH_DEPTH = 15
 
 
 def validate_path_security(path: Path, allowed_base: Path = None) -> Path:
