@@ -233,14 +233,14 @@ jobs:
 
           # Check if there are changes to commit
           if git diff --cached --quiet; then
-            echo "::warning::No changes to commit for: $DIRECTORY"
+            echo "::warning::No changes to commit for: $SRC_DIRECTORY"
           else
             # Cache GPG signature
             echo "commit" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
             --sign --armor --local-user "$GPG_KEY_ID" <<< "$GPG_PASSPHRASE" > /dev/null
 
             # Create signed commit
-            git commit -m "chore: bump $DIRECTORY" --sign
+            git commit -m "chore: bump packages for ${{ needs.create-branch.outputs.release-branch }}" --sign
 
             # Pull with rebase to maintain linear history
             git pull --rebase origin "${{ needs.create-branch.outputs.release-branch }}"
