@@ -421,7 +421,7 @@ jobs:
           echo "* [PyPi](https://pypi.org/project/awslabs.${{ matrix.changed-directory }})" >> $GITHUB_STEP_SUMMARY
           echo "::debug::Docker images:"
           docker images || echo "No Docker images found"
-          docker images --filter=reference="public.ecr.aws/awslabs-mcp/awslabs/core-mcp-server" --format '{{ json . }}' | jq -r '"* [Public ECR](https://gallery.ecr.aws/awslabs-mcp/awslabs/${{ matrix.changed-directory }}"'  >> $GITHUB_STEP_SUMMARY"
+          docker images --filter=reference="public.ecr.aws/awslabs-mcp/awslabs/core-mcp-server" --format '{{ json . }}' | jq -r '"* [Public ECR](https://gallery.ecr.aws/awslabs-mcp/awslabs/${{ matrix.changed-directory }}"'  >> $GITHUB_STEP_SUMMARY
   release_when_successful:
     name: Publish Release
     if: needs.validate-repository.outputs.is-authorized-repo == 'true' && !failure() && !cancelled() && (needs.publish-npmjs.result == 'success' || needs.publish-pypi.result == 'success' || (needs.publish-npmjs.result == 'skipped' && needs.publish-pypi.result == 'skipped'))
