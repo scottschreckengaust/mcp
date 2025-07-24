@@ -36,46 +36,136 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           fetch-depth: 0
+      - name: Validate source directory
+        run: |
+          set -euo pipefail
+
+          SRC_DIR="${{ env.SRC_DIRECTORY }}"
+          echo "::notice::Validating source directory: $SRC_DIR"
+
+          # Validate directory name format
+          if [[ ! "$SRC_DIR" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            echo "::error::Invalid source directory format: $SRC_DIR" >&2
+            exit 1
+          fi
+
+          # Check if directory exists
+          if [[ ! -d "$SRC_DIR" ]]; then
+            echo "::error::Source directory does not exist: $SRC_DIR" >&2
+            exit 1
+          fi
+
+          echo "::notice::Source directory validated: $SRC_DIR"
+
       - name: Find Changed Directories Since Last Release
         id: find-changed-directories
-        run: |
-          SINCE="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName | jq -r '.[].tagName')"
-          if [ -z "$SINCE" ]; then SINCE="$(git rev-list --max-parents=0 HEAD)"; fi;
-          echo "$SINCE"
-          CHANGED_FILES="$(git diff --name-only "$SINCE" HEAD | sed 's/^\.\///' | jq -R -s -c 'split("\n")[:-1]')"
-          SRC_DIRECTORIES="$(echo $CHANGED_FILES | jq -r '.[] | select(. | startswith("${{ env.SRC_DIRECTORY }}\/"))' | cut -d'/' -f2 | sort -u | sed 's/^\.\///' | jq -R -s -c 'split("\n")[:-1]')"
-          echo "changed-directories=$SRC_DIRECTORIES" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          echo "::notice::Finding changed directories since last release"
+
+          # Get last release with validation
+          SINCE="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName | jq -r '.[].tagName // empty')"
+
+          if [[ -z "$SINCE" ]]; then
+            echo "::notice::No previous release found, using initial commit"
+            SINCE="$(git rev-list --max-parents=0 HEAD)"
+          else
+            echo "::notice::Comparing against release: $SINCE"
+
+            # Validate tag exists
+            if ! git rev-parse "$SINCE" >/dev/null 2>&1; then
+              echo "::error::Release tag does not exist in repository: $SINCE" >&2
+              exit 1
+            fi
+          fi
+
+          # Get changed files
+          CHANGED_FILES="$(git diff --name-only "$SINCE" HEAD | sed 's/^\.\///' | jq -R -s -c 'split("\n")[:-1]')"
+
+          # Filter and validate source directories
+          SRC_DIRECTORIES="$(echo "$CHANGED_FILES" | jq -r --arg src "${{ env.SRC_DIRECTORY }}" \
+            '.[] | select(. | startswith($src + "/"))' | \
+            cut -d'/' -f2 | \
+            sort -u | \
+            while IFS= read -r dir; do
+              # Validate directory name format
+              if [[ "$dir" =~ ^[a-zA-Z0-9_-]+$ ]] && [[ -n "$dir" ]]; then
+                echo "$dir"
+              else
+                echo "::warning::Skipping invalid directory name: $dir" >&2
+              fi
+            done | \
+            jq -R -s -c 'split("\n")[:-1] | map(select(length > 0))')"
+
+          echo "changed-directories=$SRC_DIRECTORIES" >> $GITHUB_OUTPUT
+          echo "::notice::Found changed directories: $SRC_DIRECTORIES"
+
   create-branch:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
-      contents: write
+      contents: write  # SECURITY: Only for branch creation
     outputs:
       release-branch: ${{ steps.make-a-branch.outputs.release-branch }}
     needs: [look-for-changes]
     if: ${{ needs.look-for-changes.outputs.changed-directories != '[]' && needs.look-for-changes.outputs.changed-directories != '' }}
+
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
-      - name: make a branch
+      - name: Create release branch
         id: make-a-branch
         run: |
-          RELEASE="$(date +'%Y.%m.%Y%m%d%H%I%S')"
+          set -euo pipefail
+
+          # Generate release identifier with validation
+          RELEASE="$(date +'%Y.%m.%Y%m%d%H%M%S')"
           RELEASE_BRANCH="release/$RELEASE"
+
+          echo "::notice::Creating release branch: $RELEASE_BRANCH"
+
+          # Validate release format
+          if [[ ! "$RELEASE" =~ ^[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
+            echo "::error::Invalid release format generated: $RELEASE" >&2
+            exit 1
+          fi
+
+          # Check if branch already exists
+          if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
+            echo "::error::Release branch already exists: $RELEASE_BRANCH" >&2
+            exit 1
+          fi
+
+          # Configure git user
           git config --local user.email "${{ env.GITHUB_USER_EMAIL }}"
           git config --local user.name "${{ env.GITHUB_USER_NAME }}"
-          git checkout -b "release/$RELEASE"
+
+          # Create and push branch
+          git checkout -b "$RELEASE_BRANCH"
           git push --set-upstream origin "$RELEASE_BRANCH"
+
+          # Verify branch was created
+          if ! git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
+            echo "::error::Failed to verify branch creation: $RELEASE_BRANCH" >&2
+            exit 1
+          fi
+
           echo "release-branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
+          echo "::notice::Successfully created release branch: $RELEASE_BRANCH"
   bump-changed-directories:
-    name: ${{ matrix.changed-directory }} bump
+    name: bump
     env:
       SRC_DIRECTORY: ${{ vars.SRC_DIRECTORY || secrets.SRC_DIRECTORY || 'src' }}
     strategy:
@@ -84,58 +174,202 @@ jobs:
         changed-directory: ${{ fromJson(needs.look-for-changes.outputs.changed-directories) }}
       max-parallel: 1 # so a linear commit history is created
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     permissions:
       contents: write
     needs: [look-for-changes, create-branch]
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           ref: ${{ needs.create-branch.outputs.release-branch }}
           sparse-checkout: |
             ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
             .github/workflows/release.py
+      - name: Validate changed directory
+        run: |
+          set -euo pipefail
+
+          CHANGED_DIR="${{ matrix.changed-directory }}"
+          FULL_PATH="${{ env.SRC_DIRECTORY }}/$CHANGED_DIR"
+
+          echo "::notice::Validating directory: $FULL_PATH"
+
+          # Validate directory name format
+          if [[ ! "$CHANGED_DIR" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            echo "::error::Invalid directory name format: $CHANGED_DIR"
+            exit 1
+          fi
+
+          # Check if directory exists
+          if [[ ! -d "$FULL_PATH" ]]; then
+            echo "::error::Directory does not exist: $FULL_PATH"
+            exit 1
+          fi
+
+          # Check for path traversal attempts
+          RESOLVED_PATH="$(realpath "$FULL_PATH")"
+          EXPECTED_PREFIX="$(realpath "${{ env.SRC_DIRECTORY }}")"
+
+          if [[ ! "$RESOLVED_PATH" == "$EXPECTED_PREFIX"/* ]]; then
+            echo "::error::Path traversal detected: $FULL_PATH"
+            exit 1
+          fi
+
+          echo "::notice::Directory validated: $FULL_PATH"
       - name: Install uv
         uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba # v6.3.1
-      - name: bump
+      - name: Bump package version
         run: |
-          uv run --script .github/workflows/release.py bump-package --directory=${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
-      - name: configure git
-        continue-on-error: true
+          set -euo pipefail
+
+          DIRECTORY="${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}"
+          echo "::notice::Bumping version for: $DIRECTORY"
+
+          # Run version bump with validation
+          uv run --script .github/workflows/release.py bump-package --directory="$DIRECTORY"
+
+          echo "::notice::Version bump completed for: $DIRECTORY"
+      - name: Configure Git and GPG securely
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
         run: |
+          set -euo pipefail  # SECURITY: Strict error handling
+
+          # Create secure temporary directory for GPG
+          export GNUPGHOME=$(mktemp -d)
+          chmod 700 "$GNUPGHOME"
+          echo "GNUPGHOME=$GNUPGHOME" >> $GITHUB_ENV
+
+          echo "::notice::Setting up secure GPG environment"
+
+          # Configure git user
           git config --local user.email "${{ env.GITHUB_USER_EMAIL }}"
           git config --local user.name "${{ env.GITHUB_USER_NAME }}"
-          gpg --no-tty --batch --passphrase '${{ secrets.GPG_PASSPHRASE }}' --pinentry-mode loopback --allow-secret-key-import --import <(echo "${{ secrets.GPG_PRIVATE_KEY }}");
-          gpg --import-ownertrust <(echo "${{ secrets.GPG_KEY_ID }}:6:")
-          git config --global user.signingkey "${{ secrets.GPG_KEY_ID }}"
+
+          # Import GPG key without exposing secrets in command line
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet
+          echo "$GPG_KEY_ID:6:" | gpg --import-ownertrust --quiet
+
+          # Configure git GPG settings
+          git config --global user.signingkey "$GPG_KEY_ID"
           git config --global commit.gpgsign true
           git config --global tag.gpgsign true
-          touch "${{ runner.temp}}/$$.txt"
-          gpg --no-tty --batch --yes --passphrase '${{ secrets.GPG_PASSPHRASE }}' --pinentry-mode loopback --local-user "${{ env.GITHUB_USER_EMAIL }}" --sign "${{ runner.temp }}/$$.txt"
-      - name: push
+
+          # Test GPG functionality
+          echo "test" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
+            --sign --armor --local-user "$GPG_KEY_ID" <<< "$GPG_PASSPHRASE" > /dev/null
+
+          echo "::notice::GPG configuration completed successfully"
+      - name: Commit and push changes
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          git add "${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}"
-          git commit -m "chore: bump ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}" || echo "No changes to commit"
-          git pull --rebase
-          git push
+          set -euo pipefail
+
+          DIRECTORY="${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}"
+
+          echo "::notice::Committing changes for: $DIRECTORY"
+
+          # Add only the specific directory
+          git add "$DIRECTORY"
+
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "::notice::No changes to commit for: $DIRECTORY"
+          else
+            # Cache GPG signature
+            echo "commit" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
+            --sign --armor --local-user "$GPG_KEY_ID" <<< "$GPG_PASSPHRASE" > /dev/null
+
+            # Create signed commit
+            git commit -m "chore: bump $DIRECTORY" --sign
+
+            # Pull with rebase to maintain linear history
+            git pull --rebase origin "${{ needs.create-branch.outputs.release-branch }}"
+
+            # Push changes
+            git push origin "${{ needs.create-branch.outputs.release-branch }}"
+
+            echo "::notice::Successfully committed and pushed changes for: $DIRECTORY"
+          fi
+      - name: Secure GPG cleanup
+        if: always()
+        run: |
+          set +e  # Don't fail on cleanup errors
+          echo "::notice::Performing secure cleanup"
+          if [[ -n "${GNUPGHOME:-}" && -d "$GNUPGHOME" ]]; then
+            rm -rf "$GNUPGHOME"
+            echo "::notice::Cleaned up GPG directory"
+          fi
+          gpgconf --kill gpg-agent 2>/dev/null || true
+          unset GPG_PRIVATE_KEY GPG_PASSPHRASE GPG_KEY_ID GNUPGHOME 2>/dev/null || true
+          echo "::notice::Secure cleanup completed"
   create_pr:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       pull-requests: write
+      contents: read
     needs: [look-for-changes, create-branch, bump-changed-directories]
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           ref: ${{ needs.create-branch.outputs.release-branch }}
-      - name: create pr
-        run: |
-          gh pr create --base "${{ github.ref_name }}" --head "${{ needs.create-branch.outputs.release-branch }}" --title "chore: ${{ needs.create-branch.outputs.release-branch }}" --body "# ${{ needs.create-branch.outputs.release-branch }}
-
-          triggered ${{ github.workflow}} by @${{ github.triggering_actor }} for @${{ github.actor }}
-
-          ## Acknowledgment
-
-          By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of the [project license](https://github.com/awslabs/mcp/blob/main/LICENSE)."
+      - name: Create pull request
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          RELEASE_BRANCH="${{ needs.create-branch.outputs.release-branch }}"
+          BASE_BRANCH="${{ github.ref_name }}"
+
+          echo "::notice::Creating PR from $RELEASE_BRANCH to $BASE_BRANCH"
+
+          # Validate branch names
+          if [[ ! "$RELEASE_BRANCH" =~ ^release/[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
+            echo "::error::Invalid release branch format: $RELEASE_BRANCH" >&2
+            exit 1
+          fi
+
+          # Create PR with validated content
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$RELEASE_BRANCH" \
+            --title "chore: $RELEASE_BRANCH" \
+            --body "# $RELEASE_BRANCH
+
+          Triggered ${{ github.workflow }} by @${{ github.triggering_actor }} for @${{ github.actor }}
+
+          ## Changed Directories
+          ${{ needs.look-for-changes.outputs.changed-directories }}
+
+          ## Checklist
+          - [ ] Code changes have been reviewed
+          - [ ] Distribution packages have been built and tested
+          - [ ] Documentation has been updated if applicable
+
+          ## Acknowledgment
+          By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of the [project license](https://github.com/awslabs/mcp/blob/main/LICENSE)."
+
+          echo "::notice::Successfully created pull request"
+      - name: Security audit log
+        if: always()
+        run: |
+          echo "::notice::=== SECURITY AUDIT LOG ==="
+          echo "::notice::Workflow: ${{ github.workflow }}"
+          echo "::notice::Run ID: ${{ github.run_id }}"
+          echo "::notice::Actor: ${{ github.actor }}"
+          echo "::notice::Triggering Actor: ${{ github.triggering_actor }}"
+          echo "::notice::Repository: ${{ github.repository }}"
+          echo "::notice::Release Branch: ${{ needs.create-branch.outputs.release-branch }}"
+          echo "::notice::Changed Directories: ${{ needs.look-for-changes.outputs.changed-directories }}"
+          echo "::notice::Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "::notice::=== END AUDIT LOG ==="
