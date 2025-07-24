@@ -51,17 +51,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "::debug::Processing release branch: $BRANCH_REF"
+          # Use environment variable safely
+          BRANCH_REF_SAFE="$BRANCH_REF"
+
+          echo "::debug::Processing release branch: $BRANCH_REF_SAFE"
 
           # Validate branch format (YYYY.MM.YYYYMMDDHHIISS)
-          if [[ ! "$BRANCH_REF" =~ ^release/[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
-            echo "::error::Invalid release branch format: $BRANCH_REF" >&2
+          if [[ ! "$BRANCH_REF_SAFE" =~ ^release/[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
+            echo "::error::Invalid release branch format: $BRANCH_REF_SAFE" >&2
             echo "::error::Expected format: release/YYYY.MM.YYYYMMDDHHIISS" >&2
             exit 1
           fi
 
           # Extract and validate tag
-          TAG=$(echo "$BRANCH_REF" | cut -d'/' -f2)
+          TAG=$(echo "$BRANCH_REF_SAFE" | cut -d'/' -f2)
 
           # Additional tag format validation
           if [[ -z "$TAG" ]]; then
@@ -176,16 +179,3 @@ jobs:
           unset GPG_PRIVATE_KEY GPG_PASSPHRASE GPG_KEY_ID GNUPGHOME 2>/dev/null || true
 
           echo "::debug::Secure cleanup completed"
-      - name: Security audit log
-        if: always()
-        run: |
-          echo "=== SECURITY AUDIT LOG ===
-          Workflow: ${{ github.workflow }}
-          Run ID: ${{ github.run_id }}
-          Actor: ${{ github.actor }}
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.event.pull_request.head.ref }}
-          Tag: ${{ steps.validate-and-extract-tag.outputs.tag }}
-          Tag Created: ${{ steps.create-tag.outputs.tag-created }}
-          Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
-          === END AUDIT LOG ==="
