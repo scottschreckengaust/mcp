@@ -317,7 +317,7 @@ jobs:
 
           echo "::debug::Successfully created pull request $PR_URL"
           echo "### :rocket: Ready for Review" >> $GITHUB_STEP_SUMMARY
-          echo "$PR_URL created for $RELEASE_BRANCH" >> $GITHUB_STEP_SUMMARY
+          echo "Pull request $PR_URL created for [$RELEASE_BRANCH](https://github.com/${{ github.repository }}/tree/$RELEASE_BRANCH) branch" >> $GITHUB_STEP_SUMMARY
       - name: Security audit log
         if: always()
         run: |
