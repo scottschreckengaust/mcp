@@ -65,6 +65,7 @@ jobs:
             echo "::debug::Repository not authorized for release: $CURRENT_REPO"
           fi
   skip-unauthorized:
+    name: Skip Unauthorized Repository
     if: needs.validate-repository.outputs.is-authorized-repo != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 1
