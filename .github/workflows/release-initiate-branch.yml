@@ -293,6 +293,8 @@ jobs:
             exit 1
           fi
 
+          CHANGED_ITEMS="$(echo "${{ needs.look-for-changes.outputs.changed-directories }}" | jq -r '"* " + .[]')"
+
           # Create PR with validated content
           PR_URL="$(gh pr create \
             --base "$BASE_BRANCH" \
@@ -302,8 +304,8 @@ jobs:
 
           Triggered ${{ github.workflow }} by @${{ github.triggering_actor }} for @${{ github.actor }}
 
-          ## Changed Directories
-          ${{ needs.look-for-changes.outputs.changed-directories }}
+          ## Changes
+          $CHANGED_ITEMS
 
           ## Checklist
           - [ ] Code changes have been reviewed
