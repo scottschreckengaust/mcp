@@ -46,16 +46,17 @@ jobs:
           fetch-depth: 0
       - name: Validate release branch and extract tag
         id: validate-and-extract-tag
+        env:
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
 
-          BRANCH_REF="${{ github.event.pull_request.head.ref }}"
           echo "::debug::Processing release branch: $BRANCH_REF"
 
           # Validate branch format (YYYY.MM.YYYYMMDDHHIISS)
           if [[ ! "$BRANCH_REF" =~ ^release/[0-9]{4}\.[0-9]+\.[0-9]{14}$ ]]; then
             echo "::error::Invalid release branch format: $BRANCH_REF" >&2
-            echo "::error::Expected format: release/YYYY.MM.YYYYMMDDHHIISS" >&2`
+            echo "::error::Expected format: release/YYYY.MM.YYYYMMDDHHIISS" >&2
             exit 1
           fi
 
