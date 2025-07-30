@@ -58,7 +58,7 @@ logger.add(sys.stderr, level='DEBUG')
 
 
 mcp = FastMCP(
-    'mcp-core MCP server.  This is the starting point for all solutions created',
+    'mcp-core MCP server.  This is the starting point for all solutions created.',
     dependencies=[
         'loguru',
     ],
