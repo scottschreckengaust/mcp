@@ -42,7 +42,7 @@ jobs:
       group: ${{ github.workflow}}-${{ matrix.runs-on }}-${{ github.ref }}
     continue-on-error: true
     if: true || always() || cancelled() || failure() || success() # github, inputs, vars, needs
-    name: DXT ${{ github.event_name}}-${{ github.ref}}
+    name: DXT ${{ matrix.package }} ${{ matrix.runs-on }}
     needs: []
     # outputs:
     #   artifact-identifier: ${{ steps.upload.outputs.artifact-identifier }}
