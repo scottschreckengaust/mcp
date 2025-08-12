@@ -111,18 +111,18 @@ jobs:
         with:
           node-version: "22.14.0"
           cache: npm
-      # - name: Manifest Windows
-      #   if: matrix.runs-on == 'windows-latest'
-      #   working-directory: src/${{ matrix.package }}
-      #   run: |
-      #     mv manifest-windows.json manifest.json
+      - name: Manifest Windows
+        if: matrix.runs-on == 'windows-latest'
+        working-directory: src/${{ matrix.package }}
+        run: |
+          mv manifest-windows.json manifest.json
       - name: DXT
         working-directory: src/${{ matrix.package }}
         run: |
           cp -r awslabs server/
           npx @anthropic-ai/dxt@0.2.6 --version
-          # npx @anthropic-ai/dxt@0.2.6 validate manifest.json
-          # npx @anthropic-ai/dxt@0.2.6 pack
+          npx @anthropic-ai/dxt@0.2.6 validate manifest.json
+          npx @anthropic-ai/dxt@0.2.6 pack
       - name: Upload DXT
         id: upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -137,7 +137,7 @@ jobs:
         runs-on: 
           - ubuntu-latest
           - macos-latest
-          - windows-latest
+          # - windows-latest
         package:
           - redshift-mcp-server
       max-parallel: 3
