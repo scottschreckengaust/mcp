@@ -124,13 +124,13 @@ jobs:
         run: |
           uv venv --clear --relocatable --link-mode "copy" server/venv
       - name: Activate (Windows)
-        if: ${{ matrix.runs-on }} == "windows-latest"
+        if: matrix.runs-on == 'windows-latest'
         working-directory: src/${{ matrix.package }}
         run: |
           server/venv/Scripts/Activate.ps1
         shell: powershell
       - name: Activate (non-Windows)
-        if: ${{ matrix.runs-on }} != "windows-latest"
+        if: ${{ ! (matrix.runs-on == 'windows-latest') }}
         working-directory: src/${{ matrix.package }}
         run: |
           source server/venv/bin/activate
