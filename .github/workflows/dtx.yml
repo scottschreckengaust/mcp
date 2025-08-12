@@ -65,48 +65,6 @@ jobs:
       statuses: none
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - name: Stepper
-        id: stepper
-        continue-on-error: true
-        env:
-          GRACE: "grace"
-        # github, inputs, vars, needs, strategy, matrix, steps, job, runner, env
-        # 
-        if: ${{ ( true || always() || cancelled() || failure() || success() || hashFiles('**/*') ) }}
-        run: |
-          echo "::group::GITHUB object"
-          echo "${{ toJson(github) }}"
-          echo "::endgroup::"
-          # echo "::group::INPUTS object"
-          # echo "${{ toJson(inputs) }}"
-          # echo "::endgroup::"
-          # echo "::group::VARS object"
-          # echo "${{ toJson(vars) }}"
-          # echo "::endgroup::"
-          # echo "::group::NEEDS object"
-          # echo "${{ toJson(needs) }}"
-          # echo "::endgroup::"
-          # echo "::group::STRATEGY object"
-          # echo "${{ toJson(strategy) }}"
-          # echo "::endgroup::"
-          # echo "::group::MATRIX object"
-          # echo "${{ toJson(matrix) }}"
-          # echo "::endgroup::"
-          # echo "::group::STEPS object"
-          # echo "${{ toJson(steps) }}"
-          # echo "::endgroup::"
-          # echo "::group::JOB object"
-          # echo "${{ toJson(job) }}"
-          # echo "::endgroup::"
-          # echo "::group::RUNNER object"
-          # echo "${{ toJson(runner) }}"
-          # echo "::endgroup::"
-          # echo "::group::ENV object"
-          # echo "${{ toJson(env) }}"
-          # echo "::endgroup::"
-        # shell:
-        timeout-minutes: 1
-        working-directory: .
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
