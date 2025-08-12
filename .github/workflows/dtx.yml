@@ -96,13 +96,30 @@ jobs:
         working-directory: src/${{ matrix.package }}
         run: |
           uv sync --frozen --active
-      - name: Upload Virtual
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22.14.0"
+          cache: npm
+      # - name: Manifest Windows
+      #   if: matrix.runs-on == 'windows-latest'
+      #   working-directory: src/${{ matrix.package }}
+      #   run: |
+      #     mv manifest-windows.json manifest.json
+      - name: DXT
+        working-directory: src/${{ matrix.package }}
+        run: |
+          cp -r awslabs server/
+          npx @anthropic-ai/dxt@0.2.6 --version
+          # npx @anthropic-ai/dxt@0.2.6 validate manifest.json
+          # npx @anthropic-ai/dxt@0.2.6 pack
+      - name: Upload DXT
         id: upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: venv-${{ matrix.package }}-${{ matrix.runs-on }}
-          path: src/${{ matrix.package }}/server/venv
+          name: dxt-${{ matrix.package }}-${{ matrix.runs-on }}
+          path: src/${{ matrix.package }}/${{ matrix.package }}.dxt
           retention-days: 1
+          if-no-files-found: warn
     strategy:
       fail-fast: false
       matrix:
@@ -114,4 +131,3 @@ jobs:
           - redshift-mcp-server
       max-parallel: 3
     timeout-minutes: 15
-    
