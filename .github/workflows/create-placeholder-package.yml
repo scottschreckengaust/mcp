@@ -1,4 +1,5 @@
 name: Create Placeholder Package
+run-name: Create ${{inputs.namespace}}.${{inputs.package_name}} by ${{github.actor}} ${{github.triggering_actor}}
 
 on:
     workflow_dispatch:
