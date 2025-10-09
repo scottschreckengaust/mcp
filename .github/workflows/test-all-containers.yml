@@ -113,7 +113,7 @@ jobs:
           - linux/arm64
       max-parallel: 2
     steps:
-      - uses: action/checkout@v4
+      - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Build and Load
@@ -133,7 +133,7 @@ jobs:
           - linux/arm64
       max-parallel: 2
     steps:
-      - uses: action/checkout@v4
+      - uses: actions/checkout@v4
       - name: Install Finch
         run: |
           curl -fsSL https://artifact.runfinch.com/deb/GPG_KEY.pub | sudo gpg --dearmor -o /usr/share/keyrings/runfinch-finch-archive-keyring.gpg
@@ -156,7 +156,7 @@ jobs:
           - linux/arm64
       max-parallel: 2
     steps:
-      - uses: action/checkout@v4
+      - uses: actions/checkout@v4
       - name: Install Podman
         run: |
           run: |
