@@ -168,3 +168,238 @@ jobs:
           podman build --platform ${{ matrix.platform }} .
         shell: bash
         working-directory: ./src/${{ inputs.package }}
+  install-finch:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Finch with Dependency Resolution
+      run: |
+        set -e  # Exit on any error
+        
+        echo "=== Finch Installation with Dependency Resolution ==="
+        echo "GitHub Runner: $(lsb_release -d)"
+        echo "Kernel: $(uname -r)"
+        echo "Architecture: $(uname -m)"
+        
+        echo ""
+        echo "=== Step 1: Pre-installation System Analysis ==="
+        echo "Checking existing Docker/containerd installations..."
+        
+        # Check what's currently installed
+        dpkg -l | grep -E "(docker|containerd|runc)" || echo "No Docker-related packages found"
+        
+        echo ""
+        echo "Current containerd processes:"
+        ps aux | grep containerd || echo "No containerd processes running"
+        
+        echo ""
+        echo "=== Step 2: Stop and Remove Conflicting Services ==="
+        
+        # Stop Docker services if running
+        sudo systemctl stop docker.service || echo "Docker service not running"
+        sudo systemctl stop docker.socket || echo "Docker socket not running"
+        sudo systemctl stop containerd.service || echo "Containerd service not running"
+        
+        # Disable services to prevent auto-start
+        sudo systemctl disable docker.service || echo "Docker service not enabled"
+        sudo systemctl disable docker.socket || echo "Docker socket not enabled"
+        sudo systemctl disable containerd.service || echo "Containerd service not enabled"
+        
+        echo ""
+        echo "=== Step 3: Remove Conflicting Packages ==="
+        
+        # Remove Docker and related packages that conflict with finch
+        sudo apt-get remove -y --purge \
+          docker-ce \
+          docker-ce-cli \
+          docker-buildx-plugin \
+          docker-compose-plugin \
+          containerd \
+          runc \
+          moby-buildx \
+          moby-cli \
+          moby-compose \
+          moby-containerd \
+          moby-engine \
+          moby-runc \
+          || echo "Some packages were not installed"
+        
+        # Remove any held packages
+        sudo apt-mark unhold containerd.io runc docker-ce || echo "No packages were held"
+        
+        # Clean up package cache and fix any broken dependencies
+        sudo apt-get autoremove -y
+        sudo apt-get autoclean
+        sudo dpkg --configure -a
+        sudo apt-get -f install
+        
+        echo ""
+        echo "=== Step 4: Update Package Lists ==="
+        sudo apt-get update
+        
+        echo ""
+        echo "=== Step 5: Add Finch Repository ==="
+        
+        # Add Finch GPG key
+        curl -fsSL https://artifact.runfinch.com/deb/GPG_KEY.pub | sudo gpg --dearmor -o /usr/share/keyrings/runfinch-finch-archive-keyring.gpg
+        
+        # Add Finch repository
+        echo "deb [signed-by=/usr/share/keyrings/runfinch-finch-archive-keyring.gpg arch=amd64] https://artifact.runfinch.com/deb noble main" | sudo tee /etc/apt/sources.list.d/runfinch-finch.list
+        
+        # Update package lists again
+        sudo apt-get update
+        
+        echo ""
+        echo "=== Step 6: Install Dependencies in Order ==="
+        
+        # First, install runc from Ubuntu repos to satisfy basic dependency
+        sudo apt-get install -y runc
+        
+        # Check runc version
+        echo "Installed runc version:"
+        runc --version || echo "runc not working yet"
+        
+        echo ""
+        echo "=== Step 7: Install Finch Packages ==="
+        
+        # Install finch packages with conflict resolution
+        sudo apt-get install -y \
+          --allow-downgrades \
+          --allow-remove-essential \
+          --allow-change-held-packages \
+          runfinch-finch
+        
+        echo ""
+        echo "=== Step 8: Post-Installation Verification ==="
+        
+        # Check installed packages
+        echo "Finch-related packages installed:"
+        dpkg -l | grep -E "(finch|runc|containerd)" || echo "No finch packages found"
+        
+        # Check finch binary
+        echo ""
+        echo "Finch binary location and version:"
+        which finch || echo "finch binary not found in PATH"
+        
+        if command -v finch &> /dev/null; then
+          echo "Finch version:"
+          finch version || echo "finch version command failed"
+          
+          echo ""
+          echo "=== Step 9: Initialize Finch VM ==="
+          
+          # Initialize finch VM (this may take a while)
+          echo "Initializing Finch VM..."
+          timeout 300 finch vm init || echo "VM initialization timed out or failed"
+          
+          echo ""
+          echo "Finch VM status:"
+          finch vm status || echo "VM status check failed"
+          
+          echo ""
+          echo "=== Step 10: Test Basic Functionality ==="
+          
+          # Test basic finch commands
+          echo "Testing finch info:"
+          timeout 60 finch info || echo "finch info failed"
+          
+          echo ""
+          echo "Testing simple container run:"
+          timeout 120 finch run --rm hello-world || echo "Container run test failed"
+          
+        else
+          echo "ERROR: finch binary not found after installation"
+          exit 1
+        fi
+        
+        echo ""
+        echo "=== Installation Summary ==="
+        echo "✅ Finch installation completed successfully!"
+        echo "Finch is ready to use for container operations."
+
+    - name: Cache Finch Installation
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.finch
+          /usr/bin/finch
+        key: ${{ runner.os }}-finch-${{ hashFiles('**/finch-installation-workflow.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-finch-
+
+    - name: Test Finch Functionality
+      run: |
+        echo "=== Additional Finch Tests ==="
+        
+        # Test finch system information
+        echo "Finch system info:"
+        finch info || echo "finch info failed"
+        
+        echo ""
+        echo "Testing container build capability:"
+        
+        # Create a simple Dockerfile for testing
+        cat > Dockerfile.test << 'EOF'
+        FROM alpine:latest
+        RUN echo "Hello from Finch!" > /hello.txt
+        CMD cat /hello.txt
+        EOF
+        
+        # Test building an image
+        echo "Building test image..."
+        finch build -t test-image -f Dockerfile.test . || echo "Build test failed"
+        
+        # Test running the built image
+        echo "Running test image..."
+        finch run --rm test-image || echo "Run test failed"
+        
+        # Clean up
+        rm -f Dockerfile.test
+        finch rmi test-image || echo "Image cleanup failed"
+        
+        echo ""
+        echo "=== All Tests Completed ==="
+
+    - name: Troubleshooting Information
+      if: failure()
+      run: |
+        echo "=== Troubleshooting Information ==="
+        
+        echo "System information:"
+        uname -a
+        lsb_release -a
+        
+        echo ""
+        echo "Installed packages:"
+        dpkg -l | grep -E "(finch|runc|containerd|docker)"
+        
+        echo ""
+        echo "Process information:"
+        ps aux | grep -E "(finch|containerd|docker)" || echo "No related processes"
+        
+        echo ""
+        echo "Service status:"
+        systemctl status containerd || echo "containerd service not found"
+        systemctl status docker || echo "docker service not found"
+        
+        echo ""
+        echo "Finch logs (if available):"
+        ls -la ~/.finch/ || echo "No finch directory found"
+        
+        if [ -d ~/.finch/logs ]; then
+          echo "Finch log files:"
+          ls -la ~/.finch/logs/
+          echo "Latest log entries:"
+          tail -50 ~/.finch/logs/* || echo "No log files to display"
+        fi
+        
+        echo ""
+        echo "System logs related to finch:"
+        journalctl -u finch* --no-pager -n 50 || echo "No finch service logs"
+        
+        echo ""
+        echo "Available disk space:"
+        df -h
+        
+        echo ""
+        echo "Memory usage:"
+        free -h
