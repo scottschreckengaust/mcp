@@ -29,145 +29,145 @@ permissions:
     security-events: none
     statuses: none
 jobs:
-  debug:
-    concurrency:
-      cancel-in-progress: true
-      group: ${{ github.workflow}}-${{ github.event_name}}-${{ github.ref}}-${{ matrix.builder }}
-    continue-on-error: true
-    if: true || always() || cancelled() || failure() || success() # github, inputs, vars, needs
-    name: Debug - ${{ github.event_name }}
-    needs: []
-    outputs:
-      version: ${{ steps.stepper.outputs.version }}
-    permissions: 
-      actions: none
-      attestations: none
-      checks: none
-      contents: none
-      deployments: none
-      discussions: none
-      id-token: none
-      issues: none
-      models: none
-      packages: none
-      pages: none
-      pull-requests: none
-      repository-projects: none
-      security-events: none
-      statuses: none
-    runs-on: ubuntu-latest
-    steps:
-      - continue-on-error: true
-        id: stepper
-        if: ${{ ( true || always() || cancelled() || failure() || success() || hashFiles('**/*') ) }}
-        name: Stepper ${{ matrix.builder }}
-        run: |
-          echo "::group::GITHUB object"
-          echo "${{ toJson(github) }}"
-          echo "::endgroup::"
-          echo "::group::INPUTS object"
-          echo "${{ toJson(inputs) }}"
-          echo "::endgroup::"
-          echo "::group::VARS object"
-          echo "${{ toJson(vars) }}"
-          echo "::endgroup::"
-          echo "::group::NEEDS object"
-          echo "${{ toJson(needs) }}"
-          echo "::endgroup::"
-          echo "::group::STRATEGY object"
-          echo "${{ toJson(strategy) }}"
-          echo "::endgroup::"
-          echo "::group::MATRIX object"
-          echo "${{ toJson(matrix) }}"
-          echo "::endgroup::"
-          echo "::group::STEPS object"
-          echo "${{ toJson(steps) }}"
-          echo "::endgroup::"
-          echo "::group::JOB object"
-          echo "${{ toJson(job) }}"
-          echo "::endgroup::"
-          echo "::group::RUNNER object"
-          echo "${{ toJson(runner) }}"
-          echo "::endgroup::"
-          echo "::group::ENV object"
-          echo "${{ toJson(env) }}"
-          echo "::endgroup::"
-        shell: bash
-        timeout-minutes: 1
-        working-directory: .
-    strategy:
-      fail-fast: false
-      matrix:
-        builder: [ docker, finch, podman ]
-      max-parallel: 3
-    timeout-minutes: 3
+#   debug:
+#     concurrency:
+#       cancel-in-progress: true
+#       group: ${{ github.workflow}}-${{ github.event_name}}-${{ github.ref}}-${{ matrix.builder }}
+#     continue-on-error: true
+#     if: true || always() || cancelled() || failure() || success() # github, inputs, vars, needs
+#     name: Debug - ${{ github.event_name }}
+#     needs: []
+#     outputs:
+#       version: ${{ steps.stepper.outputs.version }}
+#     permissions: 
+#       actions: none
+#       attestations: none
+#       checks: none
+#       contents: none
+#       deployments: none
+#       discussions: none
+#       id-token: none
+#       issues: none
+#       models: none
+#       packages: none
+#       pages: none
+#       pull-requests: none
+#       repository-projects: none
+#       security-events: none
+#       statuses: none
+#     runs-on: ubuntu-latest
+#     steps:
+#       - continue-on-error: true
+#         id: stepper
+#         if: ${{ ( true || always() || cancelled() || failure() || success() || hashFiles('**/*') ) }}
+#         name: Stepper ${{ matrix.builder }}
+#         run: |
+#           echo "::group::GITHUB object"
+#           echo "${{ toJson(github) }}"
+#           echo "::endgroup::"
+#           echo "::group::INPUTS object"
+#           echo "${{ toJson(inputs) }}"
+#           echo "::endgroup::"
+#           echo "::group::VARS object"
+#           echo "${{ toJson(vars) }}"
+#           echo "::endgroup::"
+#           echo "::group::NEEDS object"
+#           echo "${{ toJson(needs) }}"
+#           echo "::endgroup::"
+#           echo "::group::STRATEGY object"
+#           echo "${{ toJson(strategy) }}"
+#           echo "::endgroup::"
+#           echo "::group::MATRIX object"
+#           echo "${{ toJson(matrix) }}"
+#           echo "::endgroup::"
+#           echo "::group::STEPS object"
+#           echo "${{ toJson(steps) }}"
+#           echo "::endgroup::"
+#           echo "::group::JOB object"
+#           echo "${{ toJson(job) }}"
+#           echo "::endgroup::"
+#           echo "::group::RUNNER object"
+#           echo "${{ toJson(runner) }}"
+#           echo "::endgroup::"
+#           echo "::group::ENV object"
+#           echo "${{ toJson(env) }}"
+#           echo "::endgroup::"
+#         shell: bash
+#         timeout-minutes: 1
+#         working-directory: .
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         builder: [ docker, finch, podman ]
+#       max-parallel: 3
+#     timeout-minutes: 3
 
-  docker:
-    name: Docker ${{ matrix.platform }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-      max-parallel: 2
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - name: Build and Load
-        uses: docker/build-push-action@v6
-        with:
-          load: true
-          platforms: ${{ matrix.platform }}
-          context: ./src/${{ inputs.package }}
-          file: ./src/${{ inputs.package }}/Dockerfile
-  finch:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-      max-parallel: 2
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Finch
-        run: |
-          curl -fsSL https://artifact.runfinch.com/deb/GPG_KEY.pub | sudo gpg --dearmor -o /usr/share/keyrings/runfinch-finch-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/runfinch-finch-archive-keyring.gpg arch=amd64] https://artifact.runfinch.com/deb noble main" | sudo tee /etc/apt/sources.list.d/runfinch-finch.list
-          sudo apt update
-          sudo apt install runfinch-finch
-          which finch
-        shell: bash
-      - run: |
-          finch build --platform ${{ matrix.platform }} .
-        shell: bash
-        working-directory: ./src/${{ inputs.package }}
-  podman:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-      max-parallel: 2
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Podman
-        run: |
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y podman
-            which podman
-        shell: bash
-      - run: |
-          podman build --platform ${{ matrix.platform }} .
-        shell: bash
-        working-directory: ./src/${{ inputs.package }}
+  # docker:
+  #   name: Docker ${{ matrix.platform }}
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       platform:
+  #         - linux/amd64
+  #         - linux/arm64
+  #     max-parallel: 2
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: docker/setup-qemu-action@v3
+  #     - uses: docker/setup-buildx-action@v3
+  #     - name: Build and Load
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         load: true
+  #         platforms: ${{ matrix.platform }}
+  #         context: ./src/${{ inputs.package }}
+  #         file: ./src/${{ inputs.package }}/Dockerfile
+  # finch:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       platform:
+  #         - linux/amd64
+  #         - linux/arm64
+  #     max-parallel: 2
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Finch
+  #       run: |
+  #         curl -fsSL https://artifact.runfinch.com/deb/GPG_KEY.pub | sudo gpg --dearmor -o /usr/share/keyrings/runfinch-finch-archive-keyring.gpg
+  #         echo "deb [signed-by=/usr/share/keyrings/runfinch-finch-archive-keyring.gpg arch=amd64] https://artifact.runfinch.com/deb noble main" | sudo tee /etc/apt/sources.list.d/runfinch-finch.list
+  #         sudo apt update
+  #         sudo apt install runfinch-finch
+  #         which finch
+  #       shell: bash
+  #     - run: |
+  #         finch build --platform ${{ matrix.platform }} .
+  #       shell: bash
+  #       working-directory: ./src/${{ inputs.package }}
+  # podman:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       platform:
+  #         - linux/amd64
+  #         - linux/arm64
+  #     max-parallel: 2
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Podman
+  #       run: |
+  #         run: |
+  #           sudo apt-get update
+  #           sudo apt-get install -y podman
+  #           which podman
+  #       shell: bash
+  #     - run: |
+  #         podman build --platform ${{ matrix.platform }} .
+  #       shell: bash
+  #       working-directory: ./src/${{ inputs.package }}
   install-finch:
     runs-on: ubuntu-latest
     steps:
@@ -182,14 +182,10 @@ jobs:
         
         echo ""
         echo "=== Step 1: Pre-installation System Analysis ==="
-        echo "Checking existing Docker/containerd installations..."
+        echo "Checking existing Docker installations..."
         
         # Check what's currently installed
-        dpkg -l | grep -E "(docker|containerd|runc)" || echo "No Docker-related packages found"
-        
-        echo ""
-        echo "Current containerd processes:"
-        ps aux | grep containerd || echo "No containerd processes running"
+        dpkg -l | grep -E "(docker)" || echo "No Docker-related packages found"
         
         echo ""
         echo "=== Step 2: Stop and Remove Conflicting Services ==="
@@ -197,12 +193,10 @@ jobs:
         # Stop Docker services if running
         sudo systemctl stop docker.service || echo "Docker service not running"
         sudo systemctl stop docker.socket || echo "Docker socket not running"
-        sudo systemctl stop containerd.service || echo "Containerd service not running"
         
         # Disable services to prevent auto-start
         sudo systemctl disable docker.service || echo "Docker service not enabled"
         sudo systemctl disable docker.socket || echo "Docker socket not enabled"
-        sudo systemctl disable containerd.service || echo "Containerd service not enabled"
         
         echo ""
         echo "=== Step 3: Remove Conflicting Packages ==="
@@ -213,18 +207,10 @@ jobs:
           docker-ce-cli \
           docker-buildx-plugin \
           docker-compose-plugin \
-          containerd \
-          runc \
-          moby-buildx \
-          moby-cli \
-          moby-compose \
-          moby-containerd \
-          moby-engine \
-          moby-runc \
           || echo "Some packages were not installed"
         
         # Remove any held packages
-        sudo apt-mark unhold containerd.io runc docker-ce || echo "No packages were held"
+        sudo apt-mark unhold docker-ce || echo "No packages were held"
         
         # Clean up package cache and fix any broken dependencies
         sudo apt-get autoremove -y
