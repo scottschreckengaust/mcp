@@ -316,7 +316,7 @@ jobs:
         
         # Create a simple Dockerfile for testing
         cat > Dockerfile << 'EOF'
-        FROM alpine:latest
+        FROM docker.io/alpine:latest
         RUN echo "Hello from Finch!" > /hello.txt
         CMD cat /hello.txt
         EOF
@@ -330,7 +330,7 @@ jobs:
         sudo finch run --rm test-image || echo "Run test failed"
         
         # Clean up
-        rm -f Dockerfile.test
+        rm -f Dockerfile
         sudo finch rmi test-image || echo "Image cleanup failed"
         
         echo ""
