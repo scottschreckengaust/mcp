@@ -323,15 +323,15 @@ jobs:
         
         # Test building an image
         echo "Building test image..."
-        sudo finch build -t test-image . || echo "Build test failed"
+        sudo finch build -t test-image . || echo "Build test failed" && exit 1
         
         # Test running the built image
         echo "Running test image..."
-        sudo finch run --rm test-image || echo "Run test failed"
+        sudo finch run --rm test-image || echo "Run test failed" && exit 2
         
         # Clean up
         rm -f Dockerfile
-        sudo finch rmi test-image || echo "Image cleanup failed"
+        sudo finch rmi test-image || echo "Image cleanup failed" && exit 3
         
         echo ""
         echo "=== All Tests Completed ==="
