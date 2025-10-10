@@ -294,11 +294,6 @@ jobs:
         echo "✅ Finch installation completed successfully!"
         echo "Finch is ready to use for container operations."
 
-    - name: Prerequisites
-      run: |
-        echo "=== BuildKit Daemon ==="
-        sudo buildkitd
-
     - name: Test Finch Functionality
       run: |
         echo "=== Additional Finch Tests ==="
