@@ -308,10 +308,14 @@ jobs:
         RUN echo "Hello from Finch!" > /hello.txt
         CMD cat /hello.txt
         EOF
+
+        cat ./Dockerfile
         
         # Test building an image
         echo "Building test image..."
-        sudo finch build -t test-image . || echo "Build test failed" && exit 1
+        
+        sudo finch build --help
+        sudo finch build -t test-image -f ./Dockerfile . || echo "Build test failed" && exit 1
         
         # Test running the built image
         echo "Running test image..."
