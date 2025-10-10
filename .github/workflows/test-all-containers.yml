@@ -273,27 +273,17 @@ jobs:
           echo ""
           echo "=== Step 9: Initialize Finch VM ==="
           
-          sudo finch --help
-
-          # Initialize finch VM (this may take a while)
-          echo "Initializing Finch VM..."
-          timeout 300 sudo finch vm init || echo "VM initialization timed out or failed"
-          
-          echo ""
-          echo "Finch VM status:"
-          sudo finch vm status || echo "VM status check failed"
-          
+          sudo finch --help          
           echo ""
           echo "=== Step 10: Test Basic Functionality ==="
           
           # Test basic finch commands
           echo "Testing finch info:"
-          timeout 60 finch info || echo "finch info failed"
+          timeout 60 sudo finch info || echo "finch info failed"
           
           echo ""
-          echo "Testing simple container run:"
-          timeout 120 finch run --rm hello-world || echo "Container run test failed"
-          
+          echo "Testing simple container run:" 
+          timeout 120 finch run --rm public.ecr.aws/finch/hello-finch:latest || echo "Container run test failed"
         else
           echo "ERROR: finch binary not found after installation"
           exit 1
