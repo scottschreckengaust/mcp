@@ -322,7 +322,7 @@ jobs:
         EOF
 
         # Pull anyonmously
-        echo "Logging out...
+        echo "Logging out..."
         sudo finch logout || echo "Logout failed"
         
         # Test building an image
