@@ -315,7 +315,7 @@ jobs:
         echo "Building test image..."
         
         sudo finch build --help
-        sudo finch build -t test-image -f ./Dockerfile . || echo "Build test failed" && exit 1
+        sudo finch --debug build -t "test-image" -f ./Dockerfile . || echo "Build test failed" && exit 1
         
         # Test running the built image
         echo "Running test image..."
