@@ -283,7 +283,7 @@ jobs:
           
           echo ""
           echo "Testing simple container run:" 
-          timeout 120 finch run --rm public.ecr.aws/finch/hello-finch:latest || echo "Container run test failed"
+          timeout 120 sudo finch run --rm public.ecr.aws/finch/hello-finch:latest || echo "Container run test failed"
         else
           echo "ERROR: finch binary not found after installation"
           exit 1
@@ -299,10 +299,6 @@ jobs:
       run: |
         echo "=== Additional Finch Tests ==="
         
-        # Test finch system information
-        echo "Finch system info:"
-        finch info || echo "finch info failed"
-        
         echo ""
         echo "Testing container build capability:"
         
@@ -315,15 +311,15 @@ jobs:
         
         # Test building an image
         echo "Building test image..."
-        finch build -t test-image . || echo "Build test failed" && exit 1
+        sudo finch build -t test-image . || echo "Build test failed" && exit 1
         
         # Test running the built image
         echo "Running test image..."
-        finch run --rm test-image || echo "Run test failed" && exit 2
+        sudo finch run --rm test-image || echo "Run test failed" && exit 2
         
         # Clean up
         rm -f Dockerfile
-        finch rmi test-image || echo "Image cleanup failed" && exit 3
+        sudo finch rmi test-image || echo "Image cleanup failed" && exit 3
         
         echo ""
         echo "=== All Tests Completed ==="
