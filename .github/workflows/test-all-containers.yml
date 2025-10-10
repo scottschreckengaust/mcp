@@ -273,9 +273,11 @@ jobs:
           echo ""
           echo "=== Step 9: Initialize Finch VM ==="
           
+          sudo finch --help
+
           # Initialize finch VM (this may take a while)
           echo "Initializing Finch VM..."
-          timeout 300 sudo finch --debug vm init || echo "VM initialization timed out or failed"
+          timeout 300 sudo finch vm init || echo "VM initialization timed out or failed"
           
           echo ""
           echo "Finch VM status:"
