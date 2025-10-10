@@ -32,7 +32,7 @@ jobs:
   debug:
     concurrency:
       cancel-in-progress: true
-      group: ${{ github.workflow}}-${{ github.event_name}}-${{ github.ref}}
+      group: ${{ github.workflow}}-${{ github.event_name}}-${{ github.ref}}-${{ matrix.builder }}
     continue-on-error: true
     if: true || always() || cancelled() || failure() || success() # github, inputs, vars, needs
     name: Debug - ${{ github.event_name }}
@@ -282,29 +282,29 @@ jobs:
         
         if command -v finch &> /dev/null; then
           echo "Finch version:"
-          finch version || echo "finch version command failed"
+          sudo finch version || echo "finch version command failed"
           
           echo ""
           echo "=== Step 9: Initialize Finch VM ==="
           
           # Initialize finch VM (this may take a while)
           echo "Initializing Finch VM..."
-          timeout 300 finch vm init || echo "VM initialization timed out or failed"
+          timeout 300 sudo finch vm init || echo "VM initialization timed out or failed"
           
           echo ""
           echo "Finch VM status:"
-          finch vm status || echo "VM status check failed"
+          sudo finch vm status || echo "VM status check failed"
           
           echo ""
           echo "=== Step 10: Test Basic Functionality ==="
           
           # Test basic finch commands
           echo "Testing finch info:"
-          timeout 60 finch info || echo "finch info failed"
+          timeout 60 sudo finch info || echo "finch info failed"
           
           echo ""
           echo "Testing simple container run:"
-          timeout 120 finch run --rm hello-world || echo "Container run test failed"
+          timeout 120 sudo finch run --rm hello-world || echo "Container run test failed"
           
         else
           echo "ERROR: finch binary not found after installation"
@@ -332,7 +332,7 @@ jobs:
         
         # Test finch system information
         echo "Finch system info:"
-        finch info || echo "finch info failed"
+        sudo finch info || echo "finch info failed"
         
         echo ""
         echo "Testing container build capability:"
@@ -346,15 +346,15 @@ jobs:
         
         # Test building an image
         echo "Building test image..."
-        finch build -t test-image -f Dockerfile.test . || echo "Build test failed"
+        sudo finch build -t test-image -f Dockerfile.test . || echo "Build test failed"
         
         # Test running the built image
         echo "Running test image..."
-        finch run --rm test-image || echo "Run test failed"
+        sudo finch run --rm test-image || echo "Run test failed"
         
         # Clean up
         rm -f Dockerfile.test
-        finch rmi test-image || echo "Image cleanup failed"
+        sudo finch rmi test-image || echo "Image cleanup failed"
         
         echo ""
         echo "=== All Tests Completed ==="
