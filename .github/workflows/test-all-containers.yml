@@ -199,24 +199,24 @@ jobs:
         sudo systemctl disable docker.socket || echo "Docker socket not enabled"
         
         echo ""
-        echo "=== Step 3: Remove Conflicting Packages ==="
+        # echo "=== Step 3: Remove Conflicting Packages ==="
         
-        # Remove Docker and related packages that conflict with finch
-        sudo apt-get remove -y --purge \
-          docker-ce \
-          docker-ce-cli \
-          docker-buildx-plugin \
-          docker-compose-plugin \
-          || echo "Some packages were not installed"
+        # # Remove Docker and related packages that conflict with finch
+        # sudo apt-get remove -y --purge \
+        #   docker-ce \
+        #   docker-ce-cli \
+        #   docker-buildx-plugin \
+        #   docker-compose-plugin \
+        #   || echo "Some packages were not installed"
         
-        # Remove any held packages
-        sudo apt-mark unhold docker-ce || echo "No packages were held"
+        # # Remove any held packages
+        # sudo apt-mark unhold docker-ce || echo "No packages were held"
         
-        # Clean up package cache and fix any broken dependencies
-        sudo apt-get autoremove -y
-        sudo apt-get autoclean
-        sudo dpkg --configure -a
-        sudo apt-get -f install
+        # # Clean up package cache and fix any broken dependencies
+        # sudo apt-get autoremove -y
+        # sudo apt-get autoclean
+        # sudo dpkg --configure -a
+        # sudo apt-get -f install
         
         echo ""
         echo "=== Step 4: Update Package Lists ==="
