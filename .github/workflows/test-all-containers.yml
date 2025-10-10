@@ -174,6 +174,8 @@ jobs:
     - name: Install Finch with Dependency Resolution
       run: |
         set -e  # Exit on any error
+
+        buildctl --version
         
         echo "=== Finch Installation with Dependency Resolution ==="
         echo "GitHub Runner: $(lsb_release -d)"
