@@ -315,19 +315,15 @@ jobs:
         echo "Testing container build capability:"
         
         # Create a simple Dockerfile for testing
-        cat > Dockerfile.test << 'EOF'
+        cat > Dockerfile << 'EOF'
         FROM alpine:latest
         RUN echo "Hello from Finch!" > /hello.txt
         CMD cat /hello.txt
         EOF
-
-        # Pull anyonmously
-        echo "Logging out..."
-        sudo finch logout || echo "Logout failed"
         
         # Test building an image
         echo "Building test image..."
-        sudo finch build --debug -t test-image -f Dockerfile.test . || echo "Build test failed"
+        sudo finch build -t test-image . || echo "Build test failed"
         
         # Test running the built image
         echo "Running test image..."
