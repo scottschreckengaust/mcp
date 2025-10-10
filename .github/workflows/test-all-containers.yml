@@ -174,8 +174,6 @@ jobs:
     - name: Install Finch with Dependency Resolution
       run: |
         set -e  # Exit on any error
-
-        buildctl --version
         
         echo "=== Finch Installation with Dependency Resolution ==="
         echo "GitHub Runner: $(lsb_release -d)"
@@ -296,6 +294,10 @@ jobs:
         echo "✅ Finch installation completed successfully!"
         echo "Finch is ready to use for container operations."
 
+    - name: Prerequisites
+      run: |
+        echo "=== BuildKit Daemon ==="
+        sudo buildkitd
 
     - name: Test Finch Functionality
       run: |
