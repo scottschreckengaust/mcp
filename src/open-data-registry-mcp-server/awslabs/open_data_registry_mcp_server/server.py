@@ -180,25 +180,53 @@ async def get_sample_data(
 
 @mcp.tool()
 async def list_categories(ctx: Context) -> List[CategoryInfo]:
-    """Get list of available dataset categories.
+    """Get list of available ADXCategories (high-level business categories).
     
-    This tool returns all available categories in the Open Data Registry
-    along with the count of datasets in each category.
+    This tool returns all available ADXCategories in the Open Data Registry
+    along with the count of datasets in each category. ADXCategories are optional
+    high-level business classifications (0-2 per dataset), so many datasets may be
+    uncategorized. For more granular classification, use list_tags instead.
     
     Returns:
-        List of categories with dataset counts
+        List of ADXCategories with dataset counts
     """
     try:
-        logger.info("Listing dataset categories")
+        logger.info("Listing dataset ADXCategories")
         
         categories = await dataset_service.list_categories()
         
-        logger.info(f"Found {len(categories)} categories")
+        logger.info(f"Found {len(categories)} ADXCategories")
         return categories
         
     except Exception as e:
         logger.error(f"Failed to list categories: {e}")
         raise ValueError(f"Failed to list categories: {str(e)}")
+
+
+@mcp.tool()
+async def list_tags(ctx: Context) -> List[CategoryInfo]:
+    """Get list of available tags with dataset counts.
+    
+    This tool returns all available tags used in the Open Data Registry along with
+    the count of datasets for each tag. Tags are required granular classification
+    labels that provide more specific categorization than ADXCategories. Every
+    dataset must have at least one tag, making this a comprehensive way to explore
+    available datasets.
+    
+    Returns:
+        List of tags with dataset counts, sorted by popularity (most used first)
+    """
+    try:
+        logger.info("Listing dataset tags")
+        
+        tags = await dataset_service.list_tags()
+        
+        logger.info(f"Found {len(tags)} unique tags")
+        return tags
+        
+    except Exception as e:
+        logger.error(f"Failed to list tags: {e}")
+        raise ValueError(f"Failed to list tags: {str(e)}")
 
 
 # Register prompts and resources

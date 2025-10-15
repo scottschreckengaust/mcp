@@ -126,7 +126,7 @@ exclude = [
     ".vscode/",
     "*.pyc",
     "Dockerfile",
-    "uv-requirements.text,
+    "uv-requirements.txt",
     "docker-healthcheck.sh",
     ".gitignore",
 ]

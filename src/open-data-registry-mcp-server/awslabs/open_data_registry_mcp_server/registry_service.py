@@ -1120,66 +1120,55 @@ class RegistryService:
             raise
     
     async def get_categories(self) -> List[Dict[str, Any]]:
-        """Get list of available categories with counts."""
+        """Get list of available ADXCategories with counts.
+        
+        ADXCategories are high-level business categories (0-2 per dataset).
+        Many datasets may not have ADXCategories assigned.
+        """
         try:
             dataset_names = await self.fetch_dataset_list()
             category_counts: Dict[str, int] = {}
+            
+            # ADX Category descriptions
             category_descriptions: Dict[str, str] = {
-                "Aerospace": "Aviation and space-related datasets",
-                "Agriculture": "Agricultural and farming data",
-                "Astronomy": "Astronomical observations and space data",
-                "Atmospheric Science": "Weather and atmospheric datasets",
-                "Biology": "Biological and life sciences data",
-                "Chemistry": "Chemical compounds and molecular data",
-                "Climate": "Climate and environmental datasets",
-                "Demographics": "Population and demographic statistics",
-                "Economics": "Economic indicators and financial data",
-                "Education": "Educational resources and statistics",
-                "Energy": "Energy production and consumption data",
-                "Environmental": "Environmental monitoring and conservation data",
-                "Genomics": "Genetic and genomic sequence data",
-                "Geospatial": "Geographic and mapping datasets",
-                "Health": "Health and medical datasets",
-                "Imaging": "Image collections and visual data",
-                "Machine Learning": "Datasets for ML training and research",
-                "Meteorology": "Weather and meteorological data",
-                "Neuroscience": "Brain and neurological research data",
-                "Oceanography": "Ocean and marine datasets",
-                "Physics": "Physical sciences datasets",
-                "Satellite Imagery": "Earth observation and satellite data",
-                "Social Science": "Social and behavioral research data",
-                "Transportation": "Traffic and transportation datasets"
+                "Financial Services Data": "Financial and banking sector datasets",
+                "Retail, Location & Marketing Data": "Retail, geospatial, and marketing datasets",
+                "Public Sector Data": "Government and public sector datasets",
+                "Healthcare & Life Sciences Data": "Medical, health, and life sciences datasets",
+                "Resources Data": "Natural resources and energy datasets",
+                "Media & Entertainment Data": "Media, entertainment, and content datasets",
+                "Telecommunications Data": "Telecom and network datasets",
+                "Environmental Data": "Environmental and climate datasets",
+                "Automotive Data": "Automotive and transportation datasets",
+                "Manufacturing Data": "Manufacturing and industrial datasets",
+                "Gaming Data": "Gaming and interactive entertainment datasets"
             }
             
-            # Process datasets to count categories
+            # Count datasets without categories
+            uncategorized_count = 0
+            
+            # Process datasets to count ADXCategories
             for name in dataset_names:
                 try:
                     dataset_data = await self.fetch_dataset_yaml(name)
                     
-                    # Try different locations where category might be stored
-                    category = None
+                    # Get ADXCategories (optional field, can have 0-2 categories)
+                    adx_categories = dataset_data.get('ADXCategories', [])
                     
-                    # Check Tags.Category
-                    if 'Tags' in dataset_data and isinstance(dataset_data['Tags'], dict):
-                        category = dataset_data['Tags'].get('Category')
-                    
-                    # Check top-level Category
-                    if not category and 'Category' in dataset_data:
-                        category = dataset_data['Category']
-                    
-                    # Default to Unknown if no category found
-                    if not category:
-                        category = 'Unknown'
-                    
-                    # Handle list of categories (take first one)
-                    if isinstance(category, list) and category:
-                        category = category[0]
-                    
-                    category = str(category)
-                    category_counts[category] = category_counts.get(category, 0) + 1
+                    if not adx_categories:
+                        uncategorized_count += 1
+                    else:
+                        # Handle both single value and list
+                        if not isinstance(adx_categories, list):
+                            adx_categories = [adx_categories]
+                        
+                        for category in adx_categories:
+                            category = str(category).strip()
+                            category_counts[category] = category_counts.get(category, 0) + 1
                     
                 except Exception as e:
                     logger.warning(f"Skipping dataset {name} for category counting: {e}")
+                    uncategorized_count += 1
                     continue
             
             # Create category list with descriptions
@@ -1191,13 +1180,70 @@ class RegistryService:
                     'description': category_descriptions.get(name, f"Datasets in {name} category")
                 })
             
-            logger.info(f"Found {len(categories)} categories across {sum(category_counts.values())} datasets")
+            # Add uncategorized count if any
+            if uncategorized_count > 0:
+                categories.append({
+                    'name': 'Uncategorized',
+                    'count': uncategorized_count,
+                    'description': 'Datasets without assigned ADXCategories'
+                })
+            
+            logger.info(f"Found {len(category_counts)} ADXCategories across {sum(category_counts.values())} categorized datasets ({uncategorized_count} uncategorized)")
             return categories
             
         except Exception as e:
             logger.error(f"Failed to get categories: {e}")
-            # Return some default categories if fetching fails
             return [
-                {'name': 'Unknown', 'count': 0, 'description': 'Uncategorized datasets'},
                 {'name': 'Error', 'count': 0, 'description': f'Failed to fetch categories: {str(e)}'}
+            ]
+    
+    async def get_tags(self) -> List[Dict[str, Any]]:
+        """Get list of available Tags with counts.
+        
+        Tags are granular classification labels (required field).
+        Each dataset must have at least one tag.
+        """
+        try:
+            dataset_names = await self.fetch_dataset_list()
+            tag_counts: Dict[str, int] = {}
+            
+            # Process datasets to count tags
+            for name in dataset_names:
+                try:
+                    dataset_data = await self.fetch_dataset_yaml(name)
+                    
+                    # Get Tags (required field)
+                    tags = dataset_data.get('Tags', [])
+                    
+                    if not tags:
+                        logger.warning(f"Dataset {name} has no tags (invalid)")
+                        continue
+                    
+                    # Handle both single value and list
+                    if not isinstance(tags, list):
+                        tags = [tags]
+                    
+                    for tag in tags:
+                        tag = str(tag).strip().lower()
+                        tag_counts[tag] = tag_counts.get(tag, 0) + 1
+                    
+                except Exception as e:
+                    logger.warning(f"Skipping dataset {name} for tag counting: {e}")
+                    continue
+            
+            # Create tag list sorted by count (descending)
+            tags = []
+            for name, count in sorted(tag_counts.items(), key=lambda x: (-x[1], x[0])):
+                tags.append({
+                    'name': name,
+                    'count': count
+                })
+            
+            logger.info(f"Found {len(tags)} unique tags across {len(dataset_names)} datasets")
+            return tags
+            
+        except Exception as e:
+            logger.error(f"Failed to get tags: {e}")
+            return [
+                {'name': 'error', 'count': 0, 'description': f'Failed to fetch tags: {str(e)}'}
             ]

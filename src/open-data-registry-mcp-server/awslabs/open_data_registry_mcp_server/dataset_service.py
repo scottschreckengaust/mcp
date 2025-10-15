@@ -360,7 +360,7 @@ class DatasetService:
             raise
     
     async def list_categories(self) -> List[CategoryInfo]:
-        """Get list of available categories with counts."""
+        """Get list of available ADXCategories with counts."""
         try:
             categories_data = await self.registry_service.get_categories()
             categories = []
@@ -376,6 +376,25 @@ class DatasetService:
             
         except Exception as e:
             logger.error(f"Failed to list categories: {e}")
+            raise
+    
+    async def list_tags(self) -> List[CategoryInfo]:
+        """Get list of available tags with counts."""
+        try:
+            tags_data = await self.registry_service.get_tags()
+            tags = []
+            
+            for tag_data in tags_data:
+                tags.append(CategoryInfo(
+                    name=tag_data['name'],
+                    count=tag_data['count'],
+                    description=None  # Tags don't have descriptions
+                ))
+            
+            return tags
+            
+        except Exception as e:
+            logger.error(f"Failed to list tags: {e}")
             raise
     
     async def get_dataset_names(self) -> List[str]:
