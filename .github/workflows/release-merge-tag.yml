@@ -46,7 +46,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh pr list --state "open" --author "awslabs-mcp" --json "number,headRefName" | \
+          gh pr list --state "open" --author "scottschreckengaust" --json "number,headRefName" | \
               jq '.[] | select(.headRefName | startswith("release/")) | .number' | \
               xargs -I {} \
               gh pr close {}
