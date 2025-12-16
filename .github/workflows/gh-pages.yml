@@ -30,6 +30,8 @@ jobs:
       - name: Build website
         run: cd docusaurus && npm run build
 
+      - run: ls -alR
+
       - name: Upload Build Artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:
