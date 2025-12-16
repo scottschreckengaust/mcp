@@ -34,7 +34,7 @@ const config: Config = {
   },
 
   // Add plugins
-  plugins: [],
+  plugins: ['./plugins/copy-well-known'],
 
   // Add scripts to be loaded in the client
   scripts: [],
