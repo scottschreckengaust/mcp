@@ -422,12 +422,16 @@ def cli():
 @cli.command('pin-dependencies')
 @click.option('--directory', type=click.Path(exists=True, path_type=Path), default=Path.cwd())
 def pin_dependencies(directory: Path) -> int:
-    """Pin all dependencies in pyproject.toml to exact versions from uv.lock.
+    """Pin ALL dependencies (direct + transitive) to exact versions from uv.lock.
 
-    Reads the uv.lock file in the given directory and rewrites every dependency
-    in pyproject.toml to use == (exact) version pins matching the locked
-    resolution. This ensures that packages published to PyPI install the same
-    dependency versions that were tested during development.
+    Reads the uv.lock file in the given directory and:
+    1. Rewrites existing dependencies in pyproject.toml to use == (exact) pins
+    2. Adds all remaining transitive dependencies from uv.lock as new entries
+
+    This ensures that packages published to PyPI install the exact same
+    dependency tree that was tested during development — including every
+    transitive dependency. This is appropriate for tool packages (MCP servers,
+    CLIs) that run in isolated environments via uvx/pipx.
 
     Only registry (PyPI) packages are pinned; editable/local/path sources are
     skipped. Extras on dependency specifiers (e.g. mcp[cli]) are preserved.
@@ -442,14 +446,14 @@ def pin_dependencies(directory: Path) -> int:
         if not lock_path.exists():
             raise ValueError(f'uv.lock not found in {validated_directory}')
 
-        # Parse uv.lock to build {normalized_name: version} mapping
+        # Parse uv.lock to build {normalized_name: (original_name, version)} mapping
         lock_content = secure_file_read(lock_path)
         try:
             import tomllib
         except ModuleNotFoundError:
             import tomli as tomllib  # Python < 3.11
         lock_data = tomllib.loads(lock_content)
-        locked_versions: dict[str, str] = {}
+        locked_packages: dict[str, tuple[str, str]] = {}
         for pkg in lock_data.get('package', []):
             source = pkg.get('source', {})
             # Only pin registry packages (from PyPI), skip editable/local/path
@@ -458,9 +462,9 @@ def pin_dependencies(directory: Path) -> int:
             name = pkg.get('name', '')
             version = pkg.get('version', '')
             if name and version:
-                locked_versions[_normalize_name(name)] = version
+                locked_packages[_normalize_name(name)] = (name, version)
 
-        logging.info(f'Loaded {len(locked_versions)} locked package versions from uv.lock')
+        logging.info(f'Loaded {len(locked_packages)} locked package versions from uv.lock')
 
         # Read and rewrite pyproject.toml
         pyproject_content = secure_file_read(pyproject_path)
@@ -469,26 +473,52 @@ def pin_dependencies(directory: Path) -> int:
         if not project_section:
             raise ValueError('No project section in pyproject.toml')
 
-        dependencies = project_section.get('dependencies')
-        if not dependencies:
-            click.echo('No dependencies found in pyproject.toml, nothing to pin')
-            return 0
+        # Get the project's own name so we don't add it as a dependency
+        project_name = project_section.get('name', '')
+        project_normalized = _normalize_name(str(project_name)) if project_name else ''
 
+        dependencies = project_section.get('dependencies')
+        if dependencies is None:
+            dependencies = tomlkit.array()
+            project_section['dependencies'] = dependencies
+
+        # Track which locked packages are already covered by direct deps
+        covered: set[str] = set()
         pinned_count = 0
+
+        # Phase 1: Pin existing direct dependencies to their locked versions
         for i, dep_str in enumerate(dependencies):
-            pinned = _pin_dependency(str(dep_str), locked_versions)
+            pkg_name = re.split(r'[><=!~\[;]', str(dep_str).strip())[0].strip()
+            normalized = _normalize_name(pkg_name)
+            covered.add(normalized)
+            pinned = _pin_dependency(str(dep_str), locked_packages)
             if pinned != str(dep_str):
                 dependencies[i] = pinned
                 pinned_count += 1
                 logging.info(f'Pinned: {dep_str} -> {pinned}')
 
-        if pinned_count == 0:
+        # Phase 2: Add all remaining transitive dependencies from uv.lock
+        added_count = 0
+        for normalized, (original_name, version) in sorted(locked_packages.items()):
+            if normalized in covered:
+                continue
+            if normalized == project_normalized:
+                continue
+            dep_entry = f'{original_name}=={version}'
+            dependencies.append(dep_entry)
+            added_count += 1
+            logging.info(f'Added transitive: {dep_entry}')
+
+        if pinned_count == 0 and added_count == 0:
             click.echo('All dependencies already pinned, no changes needed')
             return 0
 
         updated_content = tomlkit.dumps(data)
         secure_file_write(pyproject_path, updated_content)
-        click.echo(f'Pinned {pinned_count} dependencies in {pyproject_path}')
+        click.echo(
+            f'Pinned {pinned_count} direct + added {added_count} transitive '
+            f'dependencies in {pyproject_path}'
+        )
         return 0
 
     except Exception as e:
@@ -502,7 +532,7 @@ def _normalize_name(name: str) -> str:
     return re.sub(r'[-_.]+', '-', name).lower()
 
 
-def _pin_dependency(dep_str: str, locked_versions: dict[str, str]) -> str:
+def _pin_dependency(dep_str: str, locked_packages: dict[str, tuple[str, str]]) -> str:
     """Rewrite a dependency string to use == with the locked version.
 
     Handles dependency specifiers like:
@@ -532,11 +562,11 @@ def _pin_dependency(dep_str: str, locked_versions: dict[str, str]) -> str:
     pkg_name = re.split(r'[><=!~]', name_part.strip())[0].strip()
     normalized = _normalize_name(pkg_name)
 
-    if normalized not in locked_versions:
+    if normalized not in locked_packages:
         logging.warning(f'No locked version found for {pkg_name}, keeping as-is')
         return dep_str
 
-    locked_version = locked_versions[normalized]
+    _, locked_version = locked_packages[normalized]
     return f'{pkg_name}{extras}=={locked_version}{marker_part}'
 
 
