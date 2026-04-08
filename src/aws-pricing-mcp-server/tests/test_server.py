@@ -29,6 +29,7 @@ from awslabs.aws_pricing_mcp_server.server import (
     get_pricing_service_attributes,
     get_pricing_service_codes,
 )
+from pydantic import ValidationError
 from unittest.mock import patch
 
 
@@ -141,6 +142,18 @@ class TestGetPricing:
         assert filter_dict['Type'] == 'EQUALS'
 
     @pytest.mark.asyncio
+    async def test_pricing_filter_rejects_empty_field(self):
+        """Test that PricingFilter rejects empty string for Field."""
+        with pytest.raises(ValidationError):
+            PricingFilter(Field='', Value='t3.medium')
+
+    @pytest.mark.asyncio
+    async def test_pricing_filter_rejects_empty_type(self):
+        """Test that PricingFilter rejects empty string for Type."""
+        with pytest.raises(ValidationError):
+            PricingFilter(Field='instanceType', Value='t3.medium', Type='')
+
+    @pytest.mark.asyncio
     async def test_new_filter_types_validation(self):
         """Test that new filter types work correctly."""
         # Test ANY_OF filter type
@@ -233,7 +246,7 @@ class TestGetPricing:
 
     @pytest.mark.asyncio
     async def test_single_region_backward_compatibility(self, mock_boto3, mock_context):
-        """Test that single region strings still work with TERM_MATCH for backward compatibility."""
+        """Test that single region strings still work with EQUALS for backward compatibility."""
         with patch('boto3.Session', return_value=mock_boto3.Session()):
             result = await get_pricing(mock_context, 'AmazonEC2', 'us-east-1')
 
@@ -241,7 +254,7 @@ class TestGetPricing:
         assert result['status'] == 'success'
         assert result['service_name'] == 'AmazonEC2'
 
-        # Verify that the mocked pricing client was called with TERM_MATCH for single region
+        # Verify that the mocked pricing client was called with EQUALS for single region
         pricing_client = mock_boto3.Session().client('pricing')
         pricing_client.get_products.assert_called_once()
         call_args = pricing_client.get_products.call_args[1]
@@ -251,9 +264,9 @@ class TestGetPricing:
         region_filters = [f for f in call_args['Filters'] if f['Field'] == 'regionCode']
         assert len(region_filters) == 1
 
-        # The region filter should use TERM_MATCH for backward compatibility
+        # The region filter should use EQUALS for backward compatibility
         region_filter = region_filters[0]
-        assert region_filter['Type'] == 'TERM_MATCH'
+        assert region_filter['Type'] == 'EQUALS'
         assert region_filter['Value'] == 'us-east-1'
 
     @pytest.mark.asyncio
@@ -398,7 +411,7 @@ class TestGetPricing:
         assert result['status'] == 'error'
         assert result['error_type'] == 'result_too_large'
         assert 'exceeding the limit of 10,000' in result['message']
-        assert 'output_options={"pricing_terms": ["OnDemand"]}' in result['message']
+        assert 'output_options={"pricing_terms": ["OnDemand", "FlatRate"]}' in result['message']
         assert 'significantly reduce response size' in result['suggestion']
         assert result['total_count'] == 100
         assert result['max_allowed_characters'] == 10000
@@ -427,6 +440,68 @@ class TestGetPricing:
         assert len(result['data']) == 100  # All results should be returned
         assert 'Retrieved pricing for AmazonEC2' in result['message']
         mock_context.info.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_pricing_without_region(self, mock_boto3, mock_context):
+        """Test get_pricing works without region parameter for global services."""
+        pricing_client = mock_boto3.Session().client('pricing')
+        pricing_client.get_products.return_value = {
+            'PriceList': ['{"sku":"ABC123","product":{"productFamily":"Data Transfer"}}']
+        }
+
+        with patch('boto3.Session', return_value=mock_boto3.Session()):
+            result = await get_pricing(mock_context, 'AWSDataTransfer', region=None)
+
+        assert result['status'] == 'success'
+        assert result['service_name'] == 'AWSDataTransfer'
+
+        # Verify no region filter was added
+        pricing_client.get_products.assert_called_once()
+        call_kwargs = pricing_client.get_products.call_args[1]
+        assert 'Filters' in call_kwargs
+        # Should have no filters since region is None and no other filters provided
+        assert len(call_kwargs['Filters']) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_pricing_region_none_explicit(self, mock_boto3, mock_context):
+        """Test get_pricing with explicit region=None."""
+        pricing_client = mock_boto3.Session().client('pricing')
+        pricing_client.get_products.return_value = {
+            'PriceList': ['{"sku":"DEF456","product":{"productFamily":"CloudFront"}}']
+        }
+
+        with patch('boto3.Session', return_value=mock_boto3.Session()):
+            result = await get_pricing(mock_context, 'AmazonCloudFront', None)
+
+        assert result['status'] == 'success'
+        assert result['service_name'] == 'AmazonCloudFront'
+
+        # Verify API was called without region filter
+        pricing_client.get_products.assert_called_once()
+        call_kwargs = pricing_client.get_products.call_args[1]
+        region_filters = [f for f in call_kwargs['Filters'] if f['Field'] == 'regionCode']
+        assert len(region_filters) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_pricing_with_filters_no_region(self, mock_boto3, mock_context):
+        """Test get_pricing with filters but no region."""
+        filters = [PricingFilter(Field='operation', Value='DataTransfer-Out-Bytes')]
+
+        pricing_client = mock_boto3.Session().client('pricing')
+        pricing_client.get_products.return_value = {
+            'PriceList': ['{"sku":"GHI789","product":{"productFamily":"Data Transfer"}}']
+        }
+
+        with patch('boto3.Session', return_value=mock_boto3.Session()):
+            result = await get_pricing(mock_context, 'AWSDataTransfer', None, filters)
+
+        assert result['status'] == 'success'
+
+        # Verify only custom filters were added, no region filter
+        pricing_client.get_products.assert_called_once()
+        call_kwargs = pricing_client.get_products.call_args[1]
+        assert len(call_kwargs['Filters']) == 1
+        assert call_kwargs['Filters'][0]['Field'] == 'operation'
 
     @pytest.mark.asyncio
     async def test_get_pricing_custom_threshold(self, mock_context, mock_boto3):
@@ -533,6 +608,51 @@ class TestGetPricing:
             assert result['next_token'] == expected_next_token_in_result
         else:
             assert 'next_token' not in result
+
+    @pytest.mark.asyncio
+    async def test_get_pricing_with_alternatives(self, mock_boto3, mock_context):
+        """Test getting pricing for service with alternatives returns alternatives field."""
+        with patch('boto3.Session', return_value=mock_boto3.Session()):
+            result = await get_pricing(mock_context, 'AmazonCloudFront', 'us-east-1')
+
+        assert result is not None
+        assert result['status'] == 'success'
+        assert result['service_name'] == 'AmazonCloudFront'
+        assert 'alternatives' in result
+        assert isinstance(result['alternatives'], list)
+        assert len(result['alternatives']) > 0
+
+        alternative = result['alternatives'][0]
+        assert alternative['service_code'] == 'CloudFrontPlans'
+        assert 'keywords' in alternative
+        assert 'bundled_services' in alternative
+        assert 'description' in alternative
+
+        assert 'alternatives' in result['message']
+        assert 'CloudFrontPlans' in result['message']
+
+    @pytest.mark.asyncio
+    async def test_get_pricing_without_alternatives(self, mock_boto3, mock_context):
+        """Test getting pricing for service without alternatives has no alternatives field."""
+        with patch('boto3.Session', return_value=mock_boto3.Session()):
+            result = await get_pricing(mock_context, 'AmazonEC2', 'us-east-1')
+
+        assert result is not None
+        assert result['status'] == 'success'
+        assert result['service_name'] == 'AmazonEC2'
+        assert 'alternatives' not in result
+        assert 'alternatives' not in result['message']
+
+    @pytest.mark.asyncio
+    async def test_get_pricing_global_service_message(self, mock_boto3, mock_context):
+        """Test message format for global services without region."""
+        with patch('boto3.Session', return_value=mock_boto3.Session()):
+            result = await get_pricing(mock_context, 'AWSDataTransfer', None)
+
+        assert result is not None
+        assert result['status'] == 'success'
+        assert 'globally' in result['message']
+        assert 'in None' not in result['message']
 
 
 class TestGetBedrockPatterns:
@@ -1263,10 +1383,14 @@ class TestGetPricingAttributeValues:
             expected = {'instanceType': ['m5.large', 't2.micro', 't2.small', 't3.medium']}
             assert result == expected
             assert pricing_client.get_attribute_values.call_count == 2
-            assert (
-                pricing_client.get_attribute_values.call_args_list[1][1].get('NextToken')
-                == 'token'
-            )
+
+            # Verify MaxResults=5000 is used in both calls
+            first_call_kwargs = pricing_client.get_attribute_values.call_args_list[0][1]
+            assert first_call_kwargs.get('MaxResults') == 10000
+
+            second_call_kwargs = pricing_client.get_attribute_values.call_args_list[1][1]
+            assert second_call_kwargs.get('MaxResults') == 10000
+            assert second_call_kwargs.get('NextToken') == 'token'
 
     @pytest.mark.asyncio
     async def test_get_pricing_attribute_values_empty_attribute_list(

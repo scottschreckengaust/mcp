@@ -4,7 +4,6 @@ from awslabs.aws_api_mcp_server.core.aws.service import (
     check_security_policy,
 )
 from awslabs.aws_api_mcp_server.core.common.models import (
-    AwsApiMcpServerErrorResponse,
     InterpretationResponse,
     IRTranslation,
     ProgramInterpretationResponse,
@@ -518,6 +517,7 @@ async def test_call_aws_security_policy_deny(
     mock_ir = MagicMock()
     mock_ir.command_metadata = MagicMock()
     mock_ir.command.is_awscli_customization = False
+    mock_ir.command.is_help_operation = False
     mock_translate_cli_to_ir.return_value = mock_ir
 
     mock_validation = MagicMock()
@@ -528,11 +528,9 @@ async def test_call_aws_security_policy_deny(
     mock_check_security_policy.return_value = PolicyDecision.DENY
 
     ctx = DummyCtx()
-
-    result = await call_aws('aws s3 rm s3://bucket/file', ctx)
-
-    assert isinstance(result, AwsApiMcpServerErrorResponse)
-    assert result.detail == 'Execution of this operation is denied by security policy.'
+    response_list = await call_aws('aws s3 rm s3://bucket/file', ctx)
+    assert len(response_list) == 1
+    assert response_list[0].error == 'Execution of this operation is denied by security policy.'
     mock_check_security_policy.assert_called_once()
 
 
@@ -554,6 +552,7 @@ async def test_call_aws_security_policy_elicit(
     mock_ir = MagicMock()
     mock_ir.command_metadata = MagicMock()
     mock_ir.command.is_awscli_customization = False
+    mock_ir.command.is_help_operation = False
     mock_translate_cli_to_ir.return_value = mock_ir
 
     mock_validation = MagicMock()
@@ -584,7 +583,9 @@ async def test_call_aws_security_policy_elicit(
     mock_request_consent.assert_called_once_with(
         'aws s3api put-object --bucket test --key test', ctx
     )
-    assert isinstance(result, ProgramInterpretationResponse)
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert isinstance(result[0].response, ProgramInterpretationResponse)
 
 
 @pytest.mark.asyncio

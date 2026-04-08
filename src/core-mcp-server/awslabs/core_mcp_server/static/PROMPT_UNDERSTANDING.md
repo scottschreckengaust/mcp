@@ -24,7 +24,7 @@ When a user presents a query, follow these steps to break it down:
 #### Getting Started with AWS
 
 - **Core MCP Server**
-  - Use `awslabs.core-mcp-server` tools for:
+  - Use `awslabs-core-mcp-server` tools for:
     - prompt_understanding: Initial query analysis and guidance on using MCP servers
 
 - **AWS API MCP Server**
@@ -101,9 +101,6 @@ When a user presents a query, follow these steps to break it down:
     - generate_image: Generate an image using Amazon Nova Canvas with text prompt
     - generate_image_with_colors: Generate an image using Amazon Nova Canvas with color guidance
 
-- **Amazon Rekognition MCP Server**
-  - Use `awslabs.amazon-rekognition-mcp-server` to analyze images using computer vision capabilities
-
 - **Amazon Bedrock Data Automation MCP Server**
   - Use `awslabs.aws-bedrock-data-automation-mcp-server` to analyze documents, images, videos, and audio files
 
@@ -112,7 +109,7 @@ When a user presents a query, follow these steps to break it down:
 ##### SQL & NoSQL Databases
 
 - **Amazon DynamoDB MCP Server**
-  - Use `awslabs.dynamodb-mcp-server` for complete DynamoDB operations and table management
+  - Use `awslabs-dynamodb-mcp-server` for complete DynamoDB operations and table management
 
 - **Amazon Aurora PostgreSQL MCP Server**
   - Use `awslabs.postgres-mcp-server` for PostgreSQL database operations via RDS Data API
@@ -221,9 +218,6 @@ When a user presents a query, follow these steps to break it down:
 - **Amazon CloudWatch MCP Server**
   - Use `awslabs.cloudwatch-mcp-server` for metrics, alarms, and logs analysis
 
-- **Amazon CloudWatch Logs MCP Server**
-  - Use `awslabs.cloudwatch-logs-mcp-server` for log analysis and operational troubleshooting
-
 - **Amazon CloudWatch Application Signals MCP Server**
   - Use `awslabs.cloudwatch-appsignals-mcp-server` for application monitoring and performance insights
 
@@ -250,7 +244,7 @@ Map user requirements to these AWS categories and their corresponding MCP server
 - EKS (Kubernetes) → `awslabs.eks-mcp-server`
 
 #### Storage
-- DynamoDB (NoSQL data) → `awslabs.dynamodb-mcp-server`
+- DynamoDB (NoSQL data) → `awslabs-dynamodb-mcp-server`
 - Aurora Serverless v2 (relational data) → `awslabs.postgres-mcp-server`, `awslabs.mysql-mcp-server`, `awslabs.aurora-dsql-mcp-server`
 - S3 (object storage) → `awslabs.aws-api-mcp-server`, `awslabs.s3-tables-mcp-server`
 - OpenSearch Serverless (search and analytics) → `opensearch-project.opensearch-mcp-server-py`
@@ -270,7 +264,6 @@ Map user requirements to these AWS categories and their corresponding MCP server
 - Bedrock Knowledge Base (knowledge base) → `awslabs.bedrock-kb-retrieval-mcp-server`
 - SageMaker (custom ML models) → `awslabs.aws-api-mcp-server`
 - Bedrock Data Automation (IDP) → `awslabs.aws-bedrock-data-automation-mcp-server`
-- Rekognition (image and video analysis) → `awslabs.amazon-rekognition-mcp-server`
 - Comprehend (natural language processing) → `awslabs.aws-api-mcp-server`
 - Transcribe (speech-to-text) → `awslabs.aws-api-mcp-server`
 - Polly (text-to-speech) → `awslabs.aws-api-mcp-server`
@@ -331,7 +324,7 @@ Map user requirements to these AWS categories and their corresponding MCP server
 - CodeArtifact (artifact repository) → `awslabs.aws-api-mcp-server`
 - CloudFormation (infrastructure as code) → `awslabs.cfn-mcp-server`
 - CDK (infrastructure as code) → `awslabs.cdk-mcp-server`
-- CloudWatch (monitoring) → `awslabs.cloudwatch-mcp-server`, `awslabs.cloudwatch-logs-mcp-server`, `awslabs.cloudwatch-appsignals-mcp-server`
+- CloudWatch (monitoring) → `awslabs.cloudwatch-mcp-server`, `awslabs.cloudwatch-appsignals-mcp-server`
 - X-Ray (distributed tracing) → `awslabs.aws-api-mcp-server`
 - Terraform → `awslabs.terraform-mcp-server`
 
@@ -412,7 +405,7 @@ The Core MCP Server can dynamically import other MCP servers based on role-based
 ```md
 # Understanding the user's requirements
 <use_mcp_tool>
-<server_name>awslabs.core-mcp-server</server_name>
+<server_name>awslabs-core-mcp-server</server_name>
 <tool_name>prompt_understanding</tool_name>
 <arguments>
 {}
