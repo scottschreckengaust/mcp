@@ -363,7 +363,7 @@ jobs:
         working-directory: ${{ env.SRC_DIRECTORY }}/${{ matrix.changed-directory }}
         run: |
           set -euo pipefail
-          echo "::debug::Building package"
+          echo "::debug::Building package: ${{ matrix.changed-directory }}"
           uv build
           echo "::debug::Package build completed"
       - name: Get Version from Package
