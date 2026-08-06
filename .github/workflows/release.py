@@ -23,6 +23,7 @@ import click
 import json
 import logging
 import re
+import shutil
 import subprocess
 import sys
 import tomlkit
@@ -464,18 +465,24 @@ def _export_locked_requirements(directory: Path) -> list[str]:
     Raises:
         ValueError: If ``uv`` is unavailable, the export fails, or it yields nothing.
     """
+    # Resolve to an absolute path rather than relying on PATH lookup inside
+    # subprocess, so which binary runs is decided here and is visible in the
+    # error message when it is missing.
+    uv_executable = shutil.which('uv')
+    if not uv_executable:
+        raise ValueError('uv not found on PATH; the release job installs it via setup-uv')
+
     try:
-        # Fixed argv, no shell: the only interpolated value is the already
-        # path-validated directory, passed as a distinct argument.
+        # Fully-qualified executable, fixed argv, no shell. The only interpolated
+        # value is the already path-validated directory, passed as its own argument
+        # so it cannot be reinterpreted as an option or a second command.
         result = subprocess.run(
-            ['uv', *UV_EXPORT_ARGS, '--directory', str(directory)],
+            [uv_executable, *UV_EXPORT_ARGS, '--directory', str(directory)],
             capture_output=True,
             text=True,
             timeout=300,
             check=False,
         )
-    except FileNotFoundError:
-        raise ValueError('uv not found on PATH; the release job installs it via setup-uv')
     except subprocess.TimeoutExpired:
         raise ValueError('uv export timed out after 300s')
 
