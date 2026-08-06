@@ -14,4 +14,5 @@
 
 """awslabs.mysql_mcp_server"""
 
-__version__ = '1.0.17'
+__version__ = '1.0.25'
+__user_agent__ = f'awslabs/mcp/mysql_mcp_server/{__version__}'
