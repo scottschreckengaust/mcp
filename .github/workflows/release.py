@@ -24,7 +24,7 @@ import json
 import logging
 import re
 import shutil
-import subprocess
+import subprocess  # nosec B404 - required to delegate dependency export to uv
 import sys
 import tomlkit
 from dataclasses import dataclass
@@ -476,7 +476,7 @@ def _export_locked_requirements(directory: Path) -> list[str]:
         # Fully-qualified executable, fixed argv, no shell. The only interpolated
         # value is the already path-validated directory, passed as its own argument
         # so it cannot be reinterpreted as an option or a second command.
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 - safe: resolved exe, fixed argv, no shell, timeout
             [uv_executable, *UV_EXPORT_ARGS, '--directory', str(directory)],
             capture_output=True,
             text=True,
