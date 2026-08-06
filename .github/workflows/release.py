@@ -3,7 +3,8 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "click>=8.1.8",
-#     "tomlkit>=0.13.2"
+#     "tomlkit>=0.13.2",
+#     "uv>=0.9.0"
 # ]
 # ///
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -23,10 +24,10 @@ import click
 import json
 import logging
 import re
-import shutil
-import subprocess  # nosec B404 - required to delegate dependency export to uv
+import subprocess
 import sys
 import tomlkit
+import uv
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NewType, Protocol
@@ -454,9 +455,10 @@ def _export_locked_requirements(directory: Path) -> list[str]:
       the lock never resolved for some environments.
 
     ``uv export`` resolves all three from the same lock: it applies group filters,
-    preserves markers, and emits one marker-guarded line per fork. ``uv`` is already
-    on PATH at this point in the release job (``setup-uv``), so this adds no
-    dependency.
+    preserves markers, and emits one marker-guarded line per fork. The binary is
+    located via ``uv.find_uv_bin()``, which returns the executable shipped by the
+    ``uv`` distribution pinned in this script's PEP 723 header — so the version
+    that runs is declared here rather than being whatever the runner has on PATH.
 
     Returns:
         Requirement specifier strings, e.g. ``["anyio==4.9.0",
@@ -465,18 +467,24 @@ def _export_locked_requirements(directory: Path) -> list[str]:
     Raises:
         ValueError: If ``uv`` is unavailable, the export fails, or it yields nothing.
     """
-    # Resolve to an absolute path rather than relying on PATH lookup inside
-    # subprocess, so which binary runs is decided here and is visible in the
-    # error message when it is missing.
-    uv_executable = shutil.which('uv')
-    if not uv_executable:
-        raise ValueError('uv not found on PATH; the release job installs it via setup-uv')
+    # Resolve the binary shipped by the pinned ``uv`` dependency in this script's
+    # PEP 723 header, rather than whatever ``PATH`` happens to name. ``PATH`` is
+    # attacker-influenced in a way a declared dependency is not: anything earlier
+    # on it that is called ``uv`` would be executed instead. This also makes the
+    # resolved version the one the header pins, not the runner's ambient install.
+    try:
+        # Raises uv._find_uv.UvNotFound, which subclasses FileNotFoundError. Catch
+        # the stdlib base rather than the private name, which is not in uv.__all__.
+        uv_executable = uv.find_uv_bin()
+    except FileNotFoundError as e:
+        raise ValueError(f'could not locate the uv binary from the uv package: {e}') from e
 
     try:
-        # Fully-qualified executable, fixed argv, no shell. The only interpolated
-        # value is the already path-validated directory, passed as its own argument
-        # so it cannot be reinterpreted as an option or a second command.
-        result = subprocess.run(  # nosec B603 - safe: resolved exe, fixed argv, no shell, timeout
+        # Absolute executable from a pinned dependency, fixed argv, and no shell,
+        # so there is no PATH lookup and no metacharacter interpretation. The only
+        # interpolated value is the already path-validated directory, passed as its
+        # own argument so it cannot be reinterpreted as an option or a command.
+        result = subprocess.run(
             [uv_executable, *UV_EXPORT_ARGS, '--directory', str(directory)],
             capture_output=True,
             text=True,
